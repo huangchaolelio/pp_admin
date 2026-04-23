@@ -22,3 +22,35 @@ export function logout() {
     method: 'post'
   })
 }
+
+export function getUserList(params) {
+  return request({
+    url: '/api/users',
+    method: 'get',
+    params
+  })
+}
+
+export function createUser(data) {
+  return request({
+    url: '/api/users',
+    method: 'post',
+    data
+  })
+}
+
+export function updateUser(id, data) {
+  return request({
+    url: `/api/users/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function updateUserStatus(id, data) {
+  return request({
+    url: `/api/users/${id}/status`,
+    method: 'patch',
+    data
+  })
+}
