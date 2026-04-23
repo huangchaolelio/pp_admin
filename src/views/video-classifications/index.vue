@@ -40,7 +40,7 @@
       </el-table-column>
       <el-table-column label="手动覆盖" width="100" align="center">
         <template slot-scope="{ row }">
-          <el-tag v-if="row.is_manually_overridden" type="warning" size="small">已覆盖</el-tag>
+          <el-tag v-if="row.manually_overridden" type="warning" size="small">已覆盖</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="90" align="center">
@@ -114,7 +114,7 @@ export default {
     ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable }),
     filteredList() {
       let result = this.list
-      if (this.filter.manual_only) result = result.filter(v => v.is_manually_overridden)
+      if (this.filter.manual_only) result = result.filter(v => v.manually_overridden)
       return result
     }
   },
@@ -129,8 +129,7 @@ export default {
       if (this.filter.video_type) params.video_type = this.filter.video_type
       try {
         const res = await listClassifications(params)
-        const data = res.data || res
-        this.list = Array.isArray(data) ? data : []
+        this.list = Array.isArray(res) ? res : (res.items || [])
         this.lastLoadedList = [...this.list]
       } catch (e) {
         if (this.lastLoadedList.length) this.list = [...this.lastLoadedList]

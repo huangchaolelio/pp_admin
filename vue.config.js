@@ -1,6 +1,11 @@
 'use strict'
 const path = require('path')
 const defaultSettings = require('./src/settings.js')
+const dotenv = require('dotenv')
+
+// 加载当前环境的 .env 文件，供 vue.config.js（Node 层）使用
+const envFile = `.env.${process.env.NODE_ENV || 'development'}`
+dotenv.config({ path: path.resolve(__dirname, envFile) })
 
 function resolve(dir) {
   return path.join(__dirname, dir)
@@ -39,7 +44,7 @@ module.exports = {
     before: require('./mock/mock-server.js'),
     proxy: {
       '/char-pp-api': {
-        target: 'http://localhost:8000',
+        target: process.env.CHAR_PP_PROXY_TARGET,
         changeOrigin: true,
         pathRewrite: { '^/char-pp-api': '' }
       }

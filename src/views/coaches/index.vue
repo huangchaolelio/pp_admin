@@ -20,9 +20,9 @@
     >
       <el-table-column label="ID" prop="id" width="80" align="center" />
       <el-table-column label="教练名称" prop="name" min-width="120" />
-      <el-table-column label="简介" prop="description" min-width="200">
+      <el-table-column label="简介" prop="bio" min-width="200">
         <template slot-scope="{ row }">
-          <span>{{ row.description || '—' }}</span>
+          <span>{{ row.bio || '—' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="100" align="center">
@@ -134,7 +134,7 @@ export default {
     },
     handleEdit(row) {
       this.dialogType = 'edit'
-      this.form = { id: row.id, name: row.name, description: row.description || '' }
+      this.form = { id: row.id, name: row.name, description: row.bio || '' }
       this.dialogVisible = true
     },
     handleDelete(row) {
@@ -158,10 +158,10 @@ export default {
         this.submitLoading = true
         try {
           if (this.dialogType === 'create') {
-            await createCoach({ name: this.form.name, description: this.form.description || undefined })
+            await createCoach({ name: this.form.name, bio: this.form.description || undefined })
             this.$message.success('教练创建成功')
           } else {
-            await updateCoach(this.form.id, { name: this.form.name, description: this.form.description || undefined })
+            await updateCoach(this.form.id, { name: this.form.name, bio: this.form.description || undefined })
             this.$message.success('更新成功')
           }
           this.dialogVisible = false

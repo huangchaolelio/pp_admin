@@ -89,7 +89,7 @@ export default {
       this.listLoading = true
       try {
         const res = await listStandards()
-        this.list = res.data || res || []
+        this.list = Array.isArray(res) ? res : (res.standards || [])
       } catch (e) {
         // 错误由拦截器处理
       } finally {
