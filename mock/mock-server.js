@@ -8,15 +8,23 @@ const mockDir = path.join(process.cwd(), 'mock')
 
 function registerRoutes(app) {
   let mockLastIndex
-  const { mocks } = require('./index.js')
+  const { mocks, charPpMocks } = require('./index.js')
+
+  // pp_admin 自身 API（/dev-api 前缀）
   const mocksForServer = mocks.map(route => {
     return responseFake(route.url, route.type, route.response)
   })
-  for (const mock of mocksForServer) {
+  // char_pp API mock（/char-pp-api 前缀）
+  const charPpMocksForServer = (charPpMocks || []).map(route => {
+    return responseFakeWithPrefix('/char-pp-api', route.url, route.type, route.response)
+  })
+
+  const allMocks = [...mocksForServer, ...charPpMocksForServer]
+  for (const mock of allMocks) {
     app[mock.type](mock.url, mock.response)
     mockLastIndex = app._router.stack.length
   }
-  const mockRoutesLength = Object.keys(mocksForServer).length
+  const mockRoutesLength = Object.keys(allMocks).length
   return {
     mockRoutesLength: mockRoutesLength,
     mockStartIndex: mockLastIndex - mockRoutesLength
@@ -39,6 +47,21 @@ const responseFake = (url, type, respond) => {
     response(req, res) {
       console.log('request invoke:' + req.path)
       res.json(Mock.mock(respond instanceof Function ? respond(req, res) : respond))
+    }
+  }
+}
+
+// char_pp API mock（使用 /char-pp-api 前缀）
+const responseFakeWithPrefix = (prefix, url, type, respond) => {
+  return {
+    url: new RegExp(`${prefix}${url}`),
+    type: type || 'get',
+    response(req, res) {
+      console.log('char_pp mock request:' + req.path)
+      const result = respond instanceof Function
+        ? respond({ body: req.body, query: req.query, url: req.path })
+        : respond
+      res.json(Mock.mock(result))
     }
   }
 }

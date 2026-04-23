@@ -7,6 +7,7 @@
         <navbar />
         <tags-view v-if="needTagsView" />
       </div>
+      <char-pp-status />
       <app-main />
       <right-panel v-if="showSettings">
         <settings />
@@ -18,6 +19,7 @@
 <script>
 import RightPanel from '@/components/RightPanel'
 import { AppMain, Navbar, Settings, Sidebar, TagsView } from './components'
+import CharPpStatus from './components/CharPpStatus'
 import ResizeMixin from './mixin/ResizeHandler'
 import { mapState } from 'vuex'
 
@@ -25,6 +27,7 @@ export default {
   name: 'Layout',
   components: {
     AppMain,
+    CharPpStatus,
     Navbar,
     RightPanel,
     Settings,

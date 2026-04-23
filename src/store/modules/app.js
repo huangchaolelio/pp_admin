@@ -6,7 +6,8 @@ const state = {
     withoutAnimation: false
   },
   device: 'desktop',
-  size: Cookies.get('size') || 'medium'
+  size: Cookies.get('size') || 'medium',
+  charPpUnavailable: false
 }
 
 const mutations = {
@@ -30,6 +31,9 @@ const mutations = {
   SET_SIZE: (state, size) => {
     state.size = size
     Cookies.set('size', size)
+  },
+  SET_CHAR_PP_UNAVAILABLE: (state, val) => {
+    state.charPpUnavailable = val
   }
 }
 
@@ -45,6 +49,9 @@ const actions = {
   },
   setSize({ commit }, size) {
     commit('SET_SIZE', size)
+  },
+  setCharPpUnavailable({ commit }, val) {
+    commit('SET_CHAR_PP_UNAVAILABLE', val)
   }
 }
 

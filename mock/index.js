@@ -5,6 +5,7 @@ const user = require('./user')
 const role = require('./role')
 const article = require('./article')
 const search = require('./remote-search')
+const charPp = require('./charPp')
 
 const mocks = [
   ...user,
@@ -12,6 +13,9 @@ const mocks = [
   ...article,
   ...search
 ]
+
+// charPp mocks 使用不同的 URL 前缀（/char-pp-api），单独导出供 mock-server 使用
+const charPpMocks = charPp
 
 // for front mock
 // please use it cautiously, it will redefine XMLHttpRequest,
@@ -56,5 +60,6 @@ function mockXHR() {
 
 module.exports = {
   mocks,
+  charPpMocks,
   mockXHR
 }

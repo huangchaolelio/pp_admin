@@ -55,8 +55,7 @@ export const constantRoutes = [
 /**
  * asyncRoutes
  * 需要根据用户角色动态加载的路由
- * super_admin: 所有菜单
- * admin: 仅 控制台 + 乒乓球教练管理
+ * super_admin 和 admin 均可访问所有菜单（无差异）
  */
 export const asyncRoutes = [
   {
@@ -80,42 +79,128 @@ export const asyncRoutes = [
   },
 
   {
-    path: '/pp-coach',
+    path: '/tasks',
     component: Layout,
-    redirect: '/pp-coach/index',
-    name: 'PpCoach',
+    redirect: '/tasks/index',
+    name: 'Tasks',
     meta: {
-      title: '乒乓球教练管理',
+      title: '任务监控',
+      icon: 'el-icon-time',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/tasks/index'),
+        name: 'TasksIndex',
+        meta: { title: '任务监控', icon: 'el-icon-time' }
+      }
+    ]
+  },
+
+  {
+    path: '/coaches',
+    component: Layout,
+    redirect: '/coaches/index',
+    name: 'Coaches',
+    meta: {
+      title: '教练管理',
       icon: 'el-icon-trophy',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
         path: 'index',
-        component: () => import('@/views/pp-coach/index'),
-        name: 'PpCoachIndex',
+        component: () => import('@/views/coaches/index'),
+        name: 'CoachesIndex',
         meta: { title: '教练管理', icon: 'el-icon-trophy' }
       }
     ]
   },
 
   {
-    path: '/system',
+    path: '/video-classifications',
     component: Layout,
-    redirect: '/system/config',
-    name: 'System',
-    alwaysShow: true,
+    redirect: '/video-classifications/index',
+    name: 'VideoClassifications',
     meta: {
-      title: '系统配置',
-      icon: 'el-icon-setting',
-      roles: ['super_admin']
+      title: '视频分类',
+      icon: 'el-icon-video-camera',
+      roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'config',
-        component: () => import('@/views/system/config/index'),
-        name: 'SystemConfig',
-        meta: { title: '系统参数', icon: 'el-icon-setting' }
+        path: 'index',
+        component: () => import('@/views/video-classifications/index'),
+        name: 'VideoClassificationsIndex',
+        meta: { title: '视频分类管理', icon: 'el-icon-video-camera' }
+      }
+    ]
+  },
+
+  {
+    path: '/standards',
+    component: Layout,
+    redirect: '/standards/index',
+    name: 'Standards',
+    meta: {
+      title: '技术标准',
+      icon: 'el-icon-data-analysis',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/standards/index'),
+        name: 'StandardsIndex',
+        meta: { title: '技术标准管理', icon: 'el-icon-data-analysis' }
+      }
+    ]
+  },
+
+  {
+    path: '/diagnosis',
+    component: Layout,
+    redirect: '/diagnosis/index',
+    name: 'Diagnosis',
+    meta: {
+      title: '动作诊断',
+      icon: 'el-icon-cpu',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/diagnosis/index'),
+        name: 'DiagnosisIndex',
+        meta: { title: '动作诊断', icon: 'el-icon-cpu' }
+      }
+    ]
+  },
+
+  {
+    path: '/knowledge-base',
+    component: Layout,
+    redirect: '/knowledge-base/list',
+    name: 'KnowledgeBase',
+    alwaysShow: true,
+    meta: {
+      title: '知识库',
+      icon: 'el-icon-reading',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'list',
+        component: () => import('@/views/knowledge-base/index'),
+        name: 'KnowledgeBaseList',
+        meta: { title: '知识库版本', icon: 'el-icon-collection' }
+      },
+      {
+        path: 'teaching-tips',
+        component: () => import('@/views/knowledge-base/teaching-tips'),
+        name: 'TeachingTips',
+        meta: { title: '教学提示', icon: 'el-icon-chat-line-round' }
       }
     ]
   },
