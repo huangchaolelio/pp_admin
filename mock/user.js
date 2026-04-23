@@ -1,42 +1,41 @@
 
 const tokens = {
+  super_admin: {
+    token: 'super_admin-token'
+  },
   admin: {
     token: 'admin-token'
-  },
-  editor: {
-    token: 'editor-token'
   }
 }
 
 const users = {
+  'super_admin-token': {
+    roles: ['super_admin'],
+    introduction: '超级管理员，拥有所有权限',
+    avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+    name: '超级管理员'
+  },
   'admin-token': {
     roles: ['admin'],
-    introduction: 'I am a super administrator',
+    introduction: '普通管理员',
     avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
-    name: 'Super Admin'
-  },
-  'editor-token': {
-    roles: ['editor'],
-    introduction: 'I am an editor',
-    avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
-    name: 'Normal Editor'
+    name: '普通管理员'
   }
 }
 
 module.exports = [
-  // user login
+  // 登录
   {
-    url: '/vue-element-admin/user/login',
+    url: '/api/user/login',
     type: 'post',
     response: config => {
       const { username } = config.body
       const token = tokens[username]
 
-      // mock error
       if (!token) {
         return {
           code: 60204,
-          message: 'Account and password are incorrect.'
+          message: '账号或密码错误'
         }
       }
 
@@ -47,19 +46,18 @@ module.exports = [
     }
   },
 
-  // get user info
+  // 获取用户信息
   {
-    url: '/vue-element-admin/user/info\.*',
+    url: '/api/user/info.*',
     type: 'get',
     response: config => {
       const { token } = config.query
       const info = users[token]
 
-      // mock error
       if (!info) {
         return {
           code: 50008,
-          message: 'Login failed, unable to get user details.'
+          message: '登录已过期，请重新登录'
         }
       }
 
@@ -70,9 +68,9 @@ module.exports = [
     }
   },
 
-  // user logout
+  // 退出登录
   {
-    url: '/vue-element-admin/user/logout',
+    url: '/api/user/logout',
     type: 'post',
     response: _ => {
       return {
