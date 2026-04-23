@@ -109,7 +109,8 @@ module.exports = [
     url: '/api/users',
     type: 'get',
     response: config => {
-      const { page = 1, page_size = 10, username = '', status = '' } = config.query
+      const { page = 1, page_size, limit, username = '', status = '' } = config.query
+      const pageSize = parseInt(page_size || limit || 10)
 
       let filtered = userList.filter(u => {
         const matchName = !username || u.username.includes(username)
@@ -118,8 +119,8 @@ module.exports = [
       })
 
       const total = filtered.length
-      const start = (parseInt(page) - 1) * parseInt(page_size)
-      const items = filtered.slice(start, start + parseInt(page_size))
+      const start = (parseInt(page) - 1) * pageSize
+      const items = filtered.slice(start, start + pageSize)
 
       return {
         code: 20000,
@@ -134,9 +135,9 @@ module.exports = [
     url: '/api/users',
     type: 'post',
     response: config => {
-      const { username, password, role, phone, remark } = config.body
+      const { username, role, mobile, phone, remark } = config.body
 
-      if (!username || !password || !role) {
+      if (!username || !role) {
         return { code: 40000, data: null, message: '缺少必填字段' }
       }
 
@@ -149,7 +150,7 @@ module.exports = [
         id: nextId++,
         username,
         role,
-        phone: phone || '',
+        mobile: mobile || phone || '',
         remark: remark || '',
         status: 'active',
         created_at: new Date().toISOString()
