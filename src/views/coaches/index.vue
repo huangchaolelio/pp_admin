@@ -12,7 +12,7 @@
 
     <el-table
       v-loading="listLoading"
-      :data="list"
+      :data="pagedList"
       border
       fit
       highlight-current-row
@@ -56,6 +56,17 @@
       </el-table-column>
     </el-table>
 
+    <el-pagination
+      style="margin-top: 16px; text-align: right"
+      :current-page.sync="currentPage"
+      :page-sizes="[10, 20, 50]"
+      :page-size.sync="pageSize"
+      :total="list.length"
+      layout="total, sizes, prev, pager, next, jumper"
+      @current-change="val => { currentPage = val }"
+      @size-change="val => { pageSize = val; currentPage = 1 }"
+    />
+
     <!-- 新增/编辑 Dialog -->
     <el-dialog :title="dialogType === 'create' ? '新增教练' : '编辑教练'" :visible.sync="dialogVisible" width="500px" @close="resetForm">
       <el-form ref="coachForm" :model="form" :rules="rules" label-width="80px">
@@ -86,6 +97,8 @@ export default {
       lastLoadedList: [],
       listLoading: false,
       showInactive: false,
+      currentPage: 1,
+      pageSize: 20,
       dialogVisible: false,
       dialogType: 'create',
       submitLoading: false,
@@ -105,13 +118,18 @@ export default {
   computed: {
     ...mapState({
       charPpUnavailable: state => state.app.charPpUnavailable
-    })
+    }),
+    pagedList() {
+      const start = (this.currentPage - 1) * this.pageSize
+      return this.list.slice(start, start + this.pageSize)
+    }
   },
   created() {
     this.fetchCoaches()
   },
   methods: {
     async fetchCoaches() {
+      this.currentPage = 1
       this.listLoading = true
       try {
         const res = await listCoaches({ include_inactive: this.showInactive || undefined })
