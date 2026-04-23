@@ -9,12 +9,12 @@
         <el-option label="专家视频" value="expert" />
         <el-option label="运动员视频" value="athlete" />
       </el-select>
-      <el-checkbox v-model="filter.manual_only" style="margin-right: 16px" @change="fetchList">只看手动覆盖</el-checkbox>
+      <el-checkbox v-model="filter.manual_only" style="margin-right: 16px" @change="handleManualOnlyChange">只看手动覆盖</el-checkbox>
       <el-button :loading="refreshLoading" :disabled="charPpUnavailable" @click="handleRefresh">重新扫描分类</el-button>
       <el-button type="primary" :disabled="charPpUnavailable" @click="handleBatchSubmit">批量提交知识提取</el-button>
     </div>
 
-    <el-table v-loading="listLoading" :data="filteredList" border fit highlight-current-row style="width: 100%">
+    <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
       <el-table-column label="视频路径" min-width="220">
         <template slot-scope="{ row }">
           <el-tooltip :content="row.cos_object_key" placement="top-start">
@@ -49,6 +49,17 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <el-pagination
+      style="margin-top: 16px; text-align: right"
+      :current-page.sync="currentPage"
+      :page-sizes="[10, 20, 50]"
+      :page-size.sync="pageSize"
+      :total="filteredList.length"
+      layout="total, sizes, prev, pager, next, jumper"
+      @current-change="val => { currentPage = val }"
+      @size-change="val => { pageSize = val; currentPage = 1 }"
+    />
 
     <!-- 编辑覆盖 Dialog -->
     <el-dialog title="手动覆盖分类" :visible.sync="editDialogVisible" width="500px">
@@ -103,6 +114,8 @@ export default {
       listLoading: false,
       refreshLoading: false,
       filter: { tech_category: '', video_type: '', manual_only: false },
+      currentPage: 1,
+      pageSize: 20,
       editDialogVisible: false,
       editForm: { cos_object_key: '', tech_category: '', video_type: '', coach_name: '' },
       editSubmitLoading: false,
@@ -116,6 +129,10 @@ export default {
       let result = this.list
       if (this.filter.manual_only) result = result.filter(v => v.manually_overridden)
       return result
+    },
+    pagedList() {
+      const start = (this.currentPage - 1) * this.pageSize
+      return this.filteredList.slice(start, start + this.pageSize)
     }
   },
   created() {
@@ -123,6 +140,7 @@ export default {
   },
   methods: {
     async fetchList() {
+      this.currentPage = 1
       this.listLoading = true
       const params = {}
       if (this.filter.tech_category) params.tech_category = this.filter.tech_category
@@ -136,6 +154,9 @@ export default {
       } finally {
         this.listLoading = false
       }
+    },
+    handleManualOnlyChange() {
+      this.currentPage = 1
     },
     handleEdit(row) {
       this.editForm = {

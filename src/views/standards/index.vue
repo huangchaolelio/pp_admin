@@ -4,7 +4,7 @@
       <el-button type="primary" :disabled="charPpUnavailable" @click="handleBuild">重建标准</el-button>
     </div>
 
-    <el-table v-loading="listLoading" :data="list" border fit highlight-current-row style="width: 100%">
+    <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
       <el-table-column label="技术类别" width="160">
         <template slot-scope="{ row }">
           <el-link type="primary" @click="handleDetail(row)">{{ techCategoryLabel(row.tech_category) }}</el-link>
@@ -28,6 +28,17 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <el-pagination
+      style="margin-top: 16px; text-align: right"
+      :current-page.sync="currentPage"
+      :page-sizes="[10, 20, 50]"
+      :page-size.sync="pageSize"
+      :total="list.length"
+      layout="total, sizes, prev, pager, next, jumper"
+      @current-change="val => { currentPage = val }"
+      @size-change="val => { pageSize = val; currentPage = 1 }"
+    />
 
     <!-- 标准详情 Dialog -->
     <el-dialog :title="`技术标准详情 — ${detailCategory}`" :visible.sync="detailDialogVisible" width="700px">
@@ -70,6 +81,8 @@ export default {
     return {
       list: [],
       listLoading: false,
+      currentPage: 1,
+      pageSize: 20,
       detailDialogVisible: false,
       detailData: null,
       detailCategory: '',
@@ -79,7 +92,11 @@ export default {
     }
   },
   computed: {
-    ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable })
+    ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable }),
+    pagedList() {
+      const start = (this.currentPage - 1) * this.pageSize
+      return this.list.slice(start, start + this.pageSize)
+    }
   },
   created() {
     this.fetchList()
