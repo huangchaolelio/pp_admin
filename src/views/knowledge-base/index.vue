@@ -1,21 +1,21 @@
 <template>
   <div class="app-container">
     <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
-      <el-table-column label="版本 ID" prop="version" min-width="160" />
+      <el-table-column label="版本号" prop="version" width="140" />
       <el-table-column label="覆盖动作类型" min-width="200">
         <template slot-scope="{ row }">
           <el-tag
             v-for="t in row.action_types_covered"
             :key="t"
             size="small"
-            style="margin-right: 4px"
-          >{{ t }}</el-tag>
+            style="margin-right: 4px; margin-bottom: 2px"
+          >{{ actionTypeLabel(t) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="技术要点数" prop="point_count" width="110" align="center" />
       <el-table-column label="状态" width="100" align="center">
         <template slot-scope="{ row }">
-          <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">{{ row.status }}</el-tag>
+          <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="审批时间" width="180" align="center">
@@ -41,6 +41,29 @@
 <script>
 import { listKnowledgeBaseVersions } from '@/api/knowledgeBase'
 
+const ACTION_TYPE_LABEL_MAP = {
+  forehand_attack: '正手攻球',
+  forehand_topspin: '正手拉球',
+  forehand_topspin_backspin: '正手拉下旋',
+  forehand_counter: '正手反带',
+  forehand_flick: '正手挑球',
+  forehand_push_long: '正手推长',
+  forehand_chop_long: '正手削长',
+  forehand_general: '正手综合',
+  forehand_position: '正手站位',
+  forehand_backhand_transition: '正反手转换',
+  backhand_topspin: '反手拉球',
+  backhand_push: '反手推挡',
+  backhand_flick: '反手挑球',
+  backhand_general: '反手综合'
+}
+
+const STATUS_LABEL_MAP = {
+  active: '已激活',
+  draft: '草稿',
+  archived: '已归档'
+}
+
 export default {
   name: 'KnowledgeBaseList',
   data() {
@@ -65,12 +88,18 @@ export default {
       this.listLoading = true
       try {
         const res = await listKnowledgeBaseVersions()
-        this.list = Array.isArray(res) ? res : (res.versions || [])
+        this.list = res.versions || (Array.isArray(res) ? res : [])
       } catch (e) {
         // 错误由拦截器处理
       } finally {
         this.listLoading = false
       }
+    },
+    actionTypeLabel(key) {
+      return ACTION_TYPE_LABEL_MAP[key] || key
+    },
+    statusLabel(key) {
+      return STATUS_LABEL_MAP[key] || key
     },
     formatDate(isoStr) {
       if (!isoStr) return '—'
