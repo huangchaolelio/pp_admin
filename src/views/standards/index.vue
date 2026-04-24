@@ -11,9 +11,9 @@
         </template>
       </el-table-column>
       <el-table-column label="版本" prop="version" width="80" align="center" />
-      <el-table-column label="质量类型" width="100" align="center">
+      <el-table-column label="来源质量" width="110" align="center">
         <template slot-scope="{ row }">
-          <el-tag :type="row.quality_type === 'high' ? 'success' : 'warning'">{{ row.quality_type || '—' }}</el-tag>
+          <el-tag :type="row.source_quality === 'multi_source' ? 'success' : 'warning'" size="small">{{ sourceQualityLabel(row.source_quality) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="教练数" prop="coach_count" width="90" align="center" />
@@ -58,8 +58,10 @@
       <el-form label-width="110px">
         <el-form-item label="技术类别">
           <el-select v-model="buildCategory" placeholder="不选则全量重建" clearable style="width: 100%">
-            <el-option label="正手拉球 (forehand_topspin)" value="forehand_topspin" />
-            <el-option label="反手推挡 (backhand_push)" value="backhand_push" />
+            <el-option label="正手攻球" value="forehand_attack" />
+            <el-option label="正手拉球" value="forehand_topspin" />
+            <el-option label="反手推挡" value="backhand_push" />
+            <el-option label="反手拉球" value="backhand_topspin" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -106,7 +108,7 @@ export default {
       this.listLoading = true
       try {
         const res = await listStandards()
-        this.list = Array.isArray(res) ? res : (res.standards || [])
+        this.list = res.standards || (Array.isArray(res) ? res : [])
       } catch (e) {
         // 错误由拦截器处理
       } finally {
@@ -144,8 +146,17 @@ export default {
       }
     },
     techCategoryLabel(key) {
-      const map = { forehand_topspin: '正手拉球', backhand_push: '反手推挡' }
+      const map = {
+        forehand_attack: '正手攻球',
+        forehand_topspin: '正手拉球',
+        backhand_push: '反手推挡',
+        backhand_topspin: '反手拉球'
+      }
       return map[key] || key
+    },
+    sourceQualityLabel(key) {
+      const map = { multi_source: '多源', single_source: '单源' }
+      return map[key] || key || '—'
     },
     formatDate(isoStr) {
       if (!isoStr) return '—'

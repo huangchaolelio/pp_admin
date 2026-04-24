@@ -11,8 +11,10 @@
             </el-form-item>
             <el-form-item label="技术类别" prop="tech_category">
               <el-select v-model="form.tech_category" style="width: 100%">
-                <el-option label="正手拉球 (forehand_topspin)" value="forehand_topspin" />
-                <el-option label="反手推挡 (backhand_push)" value="backhand_push" />
+                <el-option label="正手攻球" value="forehand_attack" />
+                <el-option label="正手拉球" value="forehand_topspin" />
+                <el-option label="反手推挡" value="backhand_push" />
+                <el-option label="反手拉球" value="backhand_topspin" />
               </el-select>
             </el-form-item>
             <el-form-item>
@@ -177,7 +179,12 @@ export default {
       return map[level] || level
     },
     techCategoryLabel(key) {
-      const map = { forehand_topspin: '正手拉球', backhand_push: '反手推挡' }
+      const map = {
+        forehand_attack: '正手攻球',
+        forehand_topspin: '正手拉球',
+        backhand_push: '反手推挡',
+        backhand_topspin: '反手拉球'
+      }
       return map[key] || key
     },
     dimTableData(dim) {
