@@ -19,3 +19,7 @@ export function refreshClassifications() {
 export function batchSubmitKnowledgeExtraction(data) {
   return request({ url: '/api/v1/videos/classifications/batch-submit', method: 'post', data })
 }
+
+export function submitExpertVideo(data) {
+  return request({ url: '/api/v1/tasks/expert-video', method: 'post', data })
+}

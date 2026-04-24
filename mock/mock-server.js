@@ -3,6 +3,8 @@ const bodyParser = require('body-parser')
 const chalk = require('chalk')
 const path = require('path')
 const Mock = require('mockjs')
+const http = require('http')
+const url = require('url')
 
 const mockDir = path.join(process.cwd(), 'mock')
 
@@ -54,6 +56,42 @@ module.exports = app => {
   app.use(bodyParser.urlencoded({
     extended: true
   }))
+
+  // 手动转发 /char-pp-api 请求到真实后端，保留 URL 原始编码（%2F 不被解码）
+  // webpack devServer proxy 使用 url.parse 会解码 %2F，导致含斜杠的 cos_object_key 路径截断
+  const charPpTarget = url.parse(process.env.CHAR_PP_PROXY_TARGET || 'http://localhost:8080')
+  app.use('/char-pp-api', (req, res) => {
+    // req.url 已去掉 /char-pp-api 前缀，保留原始编码（%2F 不被解码）
+    const options = {
+      hostname: charPpTarget.hostname,
+      port: charPpTarget.port || 80,
+      path: req.url,
+      method: req.method,
+      headers: Object.assign({}, req.headers, { host: charPpTarget.host })
+    }
+    delete options.headers['accept-encoding'] // 避免压缩导致乱码
+
+    const proxyReq = http.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers)
+      proxyRes.pipe(res, { end: true })
+    })
+
+    proxyReq.on('error', (err) => {
+      console.error('[char-pp-proxy]', err.message)
+      if (!res.headersSent) res.status(502).json({ error: 'char_pp 服务不可用' })
+    })
+
+    // bodyParser 已消费流，从 req.body 重建并发送
+    if (req.body && Object.keys(req.body).length > 0) {
+      const bodyStr = JSON.stringify(req.body)
+      proxyReq.setHeader('Content-Type', 'application/json')
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyStr))
+      proxyReq.write(bodyStr)
+      proxyReq.end()
+    } else {
+      req.pipe(proxyReq, { end: true })
+    }
+  })
 
   const mockRoutes = registerRoutes(app)
   var mockRoutesLength = mockRoutes.mockRoutesLength
