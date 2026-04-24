@@ -79,21 +79,21 @@ export const asyncRoutes = [
   },
 
   {
-    path: '/tasks',
+    path: '/video-classifications',
     component: Layout,
-    redirect: '/tasks/index',
-    name: 'Tasks',
+    redirect: '/video-classifications/index',
+    name: 'VideoClassifications',
     meta: {
-      title: '任务监控',
-      icon: 'el-icon-time',
+      title: '视频分类',
+      icon: 'el-icon-video-camera',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
         path: 'index',
-        component: () => import('@/views/tasks/index'),
-        name: 'TasksIndex',
-        meta: { title: '任务监控', icon: 'el-icon-time' }
+        component: () => import('@/views/video-classifications/index'),
+        name: 'VideoClassificationsIndex',
+        meta: { title: '视频分类管理', icon: 'el-icon-video-camera' }
       }
     ]
   },
@@ -119,21 +119,21 @@ export const asyncRoutes = [
   },
 
   {
-    path: '/video-classifications',
+    path: '/tasks',
     component: Layout,
-    redirect: '/video-classifications/index',
-    name: 'VideoClassifications',
+    redirect: '/tasks/index',
+    name: 'Tasks',
     meta: {
-      title: '视频分类',
-      icon: 'el-icon-video-camera',
+      title: '任务监控',
+      icon: 'el-icon-time',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
         path: 'index',
-        component: () => import('@/views/video-classifications/index'),
-        name: 'VideoClassificationsIndex',
-        meta: { title: '视频分类管理', icon: 'el-icon-video-camera' }
+        component: () => import('@/views/tasks/index'),
+        name: 'TasksIndex',
+        meta: { title: '任务监控', icon: 'el-icon-time' }
       }
     ]
   },
