@@ -1,10 +1,10 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-select v-model="filter.coach_name" placeholder="教练" clearable style="width: 130px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+      <el-select v-model="filter.coach_name" placeholder="教练" clearable style="width: 130px" @change="fetchList" @clear="fetchList">
         <el-option v-for="c in coachOptions" :key="c.name" :label="c.name" :value="c.name" />
       </el-select>
-      <el-select v-model="filter.tech_category" placeholder="技术类别" clearable style="width: 160px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+      <el-select v-model="filter.tech_category" placeholder="技术类别" clearable style="width: 160px" @change="fetchList" @clear="fetchList">
         <el-option label="正手技术" value="正手技术" />
         <el-option label="反手技术" value="反手技术" />
         <el-option label="发球" value="发球" />
@@ -17,43 +17,64 @@
         <el-option label="体能与辅助" value="体能与辅助" />
         <el-option label="其他" value="其他" />
       </el-select>
-      <el-select v-model="filter.video_type" placeholder="视频类型" clearable style="width: 140px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+      <el-select v-model="filter.video_type" placeholder="视频类型" clearable style="width: 130px" @change="fetchList" @clear="fetchList">
         <el-option label="教学视频" value="tutorial" />
         <el-option label="训练视频" value="training" />
       </el-select>
-      <el-checkbox v-model="filter.manual_only" style="margin-right: 16px" @change="handleManualOnlyChange">只看手动覆盖</el-checkbox>
+      <el-checkbox v-model="filter.manual_only" @change="handleManualOnlyChange">只看手动覆盖</el-checkbox>
       <el-button :loading="refreshLoading" :disabled="charPpUnavailable" @click="handleRefresh">重新扫描分类</el-button>
       <el-button type="primary" :disabled="charPpUnavailable" @click="handleBatchSubmit">批量提交知识提取</el-button>
     </div>
 
     <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
-      <el-table-column label="视频路径" min-width="320">
+      <!-- 展开行 -->
+      <el-table-column type="expand">
+        <template slot-scope="{ row }">
+          <el-descriptions :column="2" border size="small" class="expand-desc">
+            <el-descriptions-item label="视频路径" :span="2">
+              <span class="cell-path-detail">{{ row.cos_object_key }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="技术子类别">{{ row.tech_sub_category || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="技术细节">{{ row.tech_detail || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="动作类型">{{ actionTypeLabel(row.action_type) }}</el-descriptions-item>
+            <el-descriptions-item label="覆盖原因">{{ row.override_reason || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="分类时间">{{ formatDate(row.classified_at) }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{ formatDate(row.updated_at) }}</el-descriptions-item>
+          </el-descriptions>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="视频路径" min-width="260">
         <template slot-scope="{ row }">
           <span class="cell-path">{{ row.cos_object_key }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="教练名" prop="coach_name" width="100">
-        <template slot-scope="{ row }"><span>{{ row.coach_name || '—' }}</span></template>
+      <el-table-column label="教练" prop="coach_name" width="90" align="center">
+        <template slot-scope="{ row }">{{ row.coach_name || '—' }}</template>
       </el-table-column>
-      <el-table-column label="技术类别" prop="tech_category" width="120" />
-      <el-table-column label="视频类型" width="90" align="center">
+      <el-table-column label="技术类别" prop="tech_category" width="110" align="center" />
+      <el-table-column label="动作类型" width="110" align="center">
+        <template slot-scope="{ row }">{{ actionTypeLabel(row.action_type) }}</template>
+      </el-table-column>
+      <el-table-column label="视频类型" width="80" align="center">
         <template slot-scope="{ row }">
           <el-tag :type="row.video_type === 'tutorial' ? 'primary' : 'success'" size="small">
             {{ row.video_type === 'tutorial' ? '教学' : '训练' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="置信度" width="80" align="center">
+      <el-table-column label="置信度" width="75" align="center">
         <template slot-scope="{ row }">
           {{ row.classification_confidence != null ? (row.classification_confidence * 100).toFixed(0) + '%' : '—' }}
         </template>
       </el-table-column>
-      <el-table-column label="手动覆盖" width="90" align="center">
+      <el-table-column label="手动覆盖" width="85" align="center">
         <template slot-scope="{ row }">
           <el-tag v-if="row.manually_overridden" type="warning" size="small">已覆盖</el-tag>
+          <span v-else style="color:#C0C4CC">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="80" align="center">
+      <el-table-column label="操作" width="80" align="center" fixed="right">
         <template slot-scope="{ row }">
           <el-button size="mini" type="primary" :disabled="charPpUnavailable" @click="handleEdit(row)">编辑</el-button>
         </template>
@@ -72,7 +93,7 @@
     />
 
     <!-- 编辑覆盖 Dialog -->
-    <el-dialog title="手动覆盖分类" :visible.sync="editDialogVisible" width="500px">
+    <el-dialog title="手动覆盖分类" :visible.sync="editDialogVisible" width="520px">
       <el-form ref="editForm" :model="editForm" label-width="100px">
         <el-form-item label="视频路径">
           <span class="form-readonly">{{ editForm.cos_object_key }}</span>
@@ -101,6 +122,9 @@
         <el-form-item label="教练名">
           <el-input v-model="editForm.coach_name" placeholder="可选" />
         </el-form-item>
+        <el-form-item label="覆盖原因">
+          <el-input v-model="editForm.override_reason" type="textarea" :rows="2" placeholder="可选，说明覆盖原因" />
+        </el-form-item>
       </el-form>
       <span slot="footer">
         <el-button @click="editDialogVisible = false">取消</el-button>
@@ -124,6 +148,24 @@ import {
 import { listCoaches } from '@/api/coaches'
 import TaskIdListDialog from '@/components/TaskIdListDialog'
 
+const ACTION_TYPE_LABEL_MAP = {
+  forehand_attack: '正手攻球',
+  forehand_topspin: '正手拉球',
+  forehand_topspin_backspin: '正手拉下旋',
+  forehand_counter: '正手反带',
+  forehand_flick: '正手挑球',
+  forehand_push_long: '正手推长',
+  forehand_chop_long: '正手削长',
+  forehand_general: '正手综合',
+  forehand_position: '正手站位',
+  forehand_loop_underspin: '正手拉下旋弧圈',
+  forehand_backhand_transition: '正反手转换',
+  backhand_topspin: '反手拉球',
+  backhand_push: '反手推挡',
+  backhand_flick: '反手挑球',
+  backhand_general: '反手综合'
+}
+
 export default {
   name: 'VideoClassificationsIndex',
   components: { TaskIdListDialog },
@@ -138,7 +180,7 @@ export default {
       currentPage: 1,
       pageSize: 20,
       editDialogVisible: false,
-      editForm: { cos_object_key: '', tech_category: '', video_type: '', coach_name: '' },
+      editForm: { cos_object_key: '', tech_category: '', video_type: '', coach_name: '', override_reason: '' },
       editSubmitLoading: false,
       taskDialogVisible: false,
       submittedTaskIds: []
@@ -190,12 +232,20 @@ export default {
     handleManualOnlyChange() {
       this.currentPage = 1
     },
+    actionTypeLabel(key) {
+      return ACTION_TYPE_LABEL_MAP[key] || key || '—'
+    },
+    formatDate(isoStr) {
+      if (!isoStr) return '—'
+      return isoStr.replace('T', ' ').substring(0, 19)
+    },
     handleEdit(row) {
       this.editForm = {
         cos_object_key: row.cos_object_key,
         tech_category: row.tech_category || '',
         video_type: row.video_type || '',
-        coach_name: row.coach_name || ''
+        coach_name: row.coach_name || '',
+        override_reason: row.override_reason || ''
       }
       this.editDialogVisible = true
     },
@@ -205,7 +255,8 @@ export default {
         await overrideClassification(this.editForm.cos_object_key, {
           tech_category: this.editForm.tech_category,
           video_type: this.editForm.video_type,
-          coach_name: this.editForm.coach_name || undefined
+          coach_name: this.editForm.coach_name || undefined,
+          override_reason: this.editForm.override_reason || undefined
         })
         this.$message.success('分类已手动覆盖')
         this.editDialogVisible = false
@@ -272,10 +323,21 @@ export default {
   line-height: 1.5;
   font-size: 12px;
   color: #606266;
+  max-height: 54px;
+  overflow: hidden;
+}
+.cell-path-detail {
+  font-size: 12px;
+  color: #606266;
+  word-break: break-all;
+  line-height: 1.6;
 }
 .form-readonly {
   font-size: 12px;
   color: #909399;
   word-break: break-all;
+}
+.expand-desc {
+  margin: 8px 16px;
 }
 </style>
