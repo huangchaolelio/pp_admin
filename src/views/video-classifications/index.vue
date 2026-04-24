@@ -1,13 +1,25 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-select v-model="filter.tech_category" placeholder="技术类别" clearable style="width: 160px; margin-right: 8px" @change="fetchList">
-        <el-option label="正手拉球" value="forehand_topspin" />
-        <el-option label="反手推挡" value="backhand_push" />
+      <el-select v-model="filter.coach_name" placeholder="教练" clearable style="width: 130px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+        <el-option v-for="c in coachOptions" :key="c.name" :label="c.name" :value="c.name" />
       </el-select>
-      <el-select v-model="filter.video_type" placeholder="视频类型" clearable style="width: 140px; margin-right: 8px" @change="fetchList">
-        <el-option label="专家视频" value="expert" />
-        <el-option label="运动员视频" value="athlete" />
+      <el-select v-model="filter.tech_category" placeholder="技术类别" clearable style="width: 160px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+        <el-option label="正手技术" value="正手技术" />
+        <el-option label="反手技术" value="反手技术" />
+        <el-option label="发球" value="发球" />
+        <el-option label="接发球" value="接发球" />
+        <el-option label="搓球与摆短" value="搓球与摆短" />
+        <el-option label="步法与衔接" value="步法与衔接" />
+        <el-option label="综合技术" value="综合技术" />
+        <el-option label="防守与保障" value="防守与保障" />
+        <el-option label="握拍与姿态" value="握拍与姿态" />
+        <el-option label="体能与辅助" value="体能与辅助" />
+        <el-option label="其他" value="其他" />
+      </el-select>
+      <el-select v-model="filter.video_type" placeholder="视频类型" clearable style="width: 140px; margin-right: 8px" @change="fetchList" @clear="fetchList">
+        <el-option label="教学视频" value="tutorial" />
+        <el-option label="训练视频" value="training" />
       </el-select>
       <el-checkbox v-model="filter.manual_only" style="margin-right: 16px" @change="handleManualOnlyChange">只看手动覆盖</el-checkbox>
       <el-button :loading="refreshLoading" :disabled="charPpUnavailable" @click="handleRefresh">重新扫描分类</el-button>
@@ -15,35 +27,33 @@
     </div>
 
     <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
-      <el-table-column label="视频路径" min-width="220">
+      <el-table-column label="视频路径" min-width="320">
         <template slot-scope="{ row }">
-          <el-tooltip :content="row.cos_object_key" placement="top-start">
-            <span class="cell-truncate">{{ row.cos_object_key }}</span>
-          </el-tooltip>
+          <span class="cell-path">{{ row.cos_object_key }}</span>
         </template>
       </el-table-column>
       <el-table-column label="教练名" prop="coach_name" width="100">
         <template slot-scope="{ row }"><span>{{ row.coach_name || '—' }}</span></template>
       </el-table-column>
       <el-table-column label="技术类别" prop="tech_category" width="120" />
-      <el-table-column label="视频类型" width="110" align="center">
+      <el-table-column label="视频类型" width="90" align="center">
         <template slot-scope="{ row }">
-          <el-tag :type="row.video_type === 'expert' ? 'primary' : 'success'">
-            {{ row.video_type === 'expert' ? '专家' : '运动员' }}
+          <el-tag :type="row.video_type === 'tutorial' ? 'primary' : 'success'" size="small">
+            {{ row.video_type === 'tutorial' ? '教学' : '训练' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="置信度" width="100" align="center">
+      <el-table-column label="置信度" width="80" align="center">
         <template slot-scope="{ row }">
-          {{ row.confidence != null ? (row.confidence * 100).toFixed(0) + '%' : '—' }}
+          {{ row.classification_confidence != null ? (row.classification_confidence * 100).toFixed(0) + '%' : '—' }}
         </template>
       </el-table-column>
-      <el-table-column label="手动覆盖" width="100" align="center">
+      <el-table-column label="手动覆盖" width="90" align="center">
         <template slot-scope="{ row }">
           <el-tag v-if="row.manually_overridden" type="warning" size="small">已覆盖</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="90" align="center">
+      <el-table-column label="操作" width="80" align="center">
         <template slot-scope="{ row }">
           <el-button size="mini" type="primary" :disabled="charPpUnavailable" @click="handleEdit(row)">编辑</el-button>
         </template>
@@ -69,14 +79,23 @@
         </el-form-item>
         <el-form-item label="技术类别">
           <el-select v-model="editForm.tech_category" style="width: 100%">
-            <el-option label="正手拉球" value="forehand_topspin" />
-            <el-option label="反手推挡" value="backhand_push" />
+            <el-option label="正手技术" value="正手技术" />
+            <el-option label="反手技术" value="反手技术" />
+            <el-option label="发球" value="发球" />
+            <el-option label="接发球" value="接发球" />
+            <el-option label="搓球与摆短" value="搓球与摆短" />
+            <el-option label="步法与衔接" value="步法与衔接" />
+            <el-option label="综合技术" value="综合技术" />
+            <el-option label="防守与保障" value="防守与保障" />
+            <el-option label="握拍与姿态" value="握拍与姿态" />
+            <el-option label="体能与辅助" value="体能与辅助" />
+            <el-option label="其他" value="其他" />
           </el-select>
         </el-form-item>
         <el-form-item label="视频类型">
           <el-select v-model="editForm.video_type" style="width: 100%">
-            <el-option label="专家视频" value="expert" />
-            <el-option label="运动员视频" value="athlete" />
+            <el-option label="教学视频" value="tutorial" />
+            <el-option label="训练视频" value="training" />
           </el-select>
         </el-form-item>
         <el-form-item label="教练名">
@@ -102,6 +121,7 @@ import {
   refreshClassifications,
   batchSubmitKnowledgeExtraction
 } from '@/api/videoClassifications'
+import { listCoaches } from '@/api/coaches'
 import TaskIdListDialog from '@/components/TaskIdListDialog'
 
 export default {
@@ -113,7 +133,8 @@ export default {
       lastLoadedList: [],
       listLoading: false,
       refreshLoading: false,
-      filter: { tech_category: '', video_type: '', manual_only: false },
+      coachOptions: [],
+      filter: { coach_name: '', tech_category: '', video_type: '', manual_only: false },
       currentPage: 1,
       pageSize: 20,
       editDialogVisible: false,
@@ -136,18 +157,29 @@ export default {
     }
   },
   created() {
+    this.fetchCoaches()
     this.fetchList()
   },
   methods: {
+    async fetchCoaches() {
+      try {
+        const res = await listCoaches({ include_inactive: false })
+        const data = res.data !== undefined ? res.data : res
+        this.coachOptions = Array.isArray(data) ? data : []
+      } catch (e) {
+        // 教练列表加载失败不影响主流程
+      }
+    },
     async fetchList() {
       this.currentPage = 1
       this.listLoading = true
       const params = {}
+      if (this.filter.coach_name) params.coach_name = this.filter.coach_name
       if (this.filter.tech_category) params.tech_category = this.filter.tech_category
       if (this.filter.video_type) params.video_type = this.filter.video_type
       try {
         const res = await listClassifications(params)
-        this.list = Array.isArray(res) ? res : (res.items || [])
+        this.list = res.items || res.data || []
         this.lastLoadedList = [...this.list]
       } catch (e) {
         if (this.lastLoadedList.length) this.list = [...this.lastLoadedList]
@@ -204,17 +236,17 @@ export default {
       }
     },
     async handleBatchSubmit() {
-      await this.$confirm('将为当前筛选结果中的专家视频批量提交知识提取任务，确认继续？', '批量提交', { type: 'info' })
+      await this.$confirm('将为当前筛选结果中的教学视频批量提交知识提取任务，确认继续？', '批量提交', { type: 'info' })
         .catch(() => { throw new Error('cancel') })
       try {
-        const expertKeys = this.filteredList
-          .filter(v => v.video_type === 'expert')
+        const tutorialKeys = this.filteredList
+          .filter(v => v.video_type === 'tutorial')
           .map(v => v.cos_object_key)
-        if (!expertKeys.length) {
-          this.$message.warning('当前筛选结果中无专家视频')
+        if (!tutorialKeys.length) {
+          this.$message.warning('当前筛选结果中无教学视频')
           return
         }
-        const res = await batchSubmitKnowledgeExtraction({ cos_object_keys: expertKeys })
+        const res = await batchSubmitKnowledgeExtraction({ cos_object_keys: tutorialKeys })
         const data = res.data || res
         this.submittedTaskIds = data.task_ids || []
         this.taskDialogVisible = true
@@ -234,12 +266,12 @@ export default {
   flex-wrap: wrap;
   gap: 8px;
 }
-.cell-truncate {
+.cell-path {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
+  word-break: break-all;
+  line-height: 1.5;
+  font-size: 12px;
+  color: #606266;
 }
 .form-readonly {
   font-size: 12px;

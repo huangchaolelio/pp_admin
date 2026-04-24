@@ -11,6 +11,7 @@ function registerRoutes(app) {
   const { mocks } = require('./index.js')
 
   // pp_admin 自身 API（/dev-api 前缀）
+  // char_pp API（/char-pp-api）不走 mock，直接由 devServer.proxy 转发到真实后端
   const allMocks = mocks.map(route => {
     return responseFake(route.url, route.type, route.response)
   })
