@@ -84,10 +84,10 @@ const ACTION_TYPE_LABEL_MAP = {
 
 const TECH_PHASE_LABEL_MAP = {
   preparation: '准备阶段',
-  backswing: '引拍阶段',
   contact: '击球阶段',
   follow_through: '随挥阶段',
-  recovery: '还原阶段'
+  footwork: '步法',
+  general: '综合'
 }
 
 export default {
