@@ -107,6 +107,33 @@
         <template slot-scope="{ row }">{{ row.video_filename || '—' }}</template>
       </el-table-column>
 
+      <el-table-column label="视频时长" width="100" align="center">
+        <template slot-scope="{ row }">{{ formatDuration(row.video_duration_seconds) }}</template>
+      </el-table-column>
+
+      <el-table-column label="分辨率" width="110" align="center">
+        <template slot-scope="{ row }">{{ row.video_resolution || '—' }}</template>
+      </el-table-column>
+
+      <el-table-column label="执行耗时" width="110" align="center">
+        <template slot-scope="{ row }">
+          <span :class="speedTagClass(row)">{{ formatDuration(row.execution_seconds) }}</span>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="实时倍率" width="90" align="center">
+        <template slot-scope="{ row }">
+          <el-tooltip
+            v-if="row.video_duration_seconds && row.execution_seconds"
+            :content="`执行耗时 ${row.execution_seconds.toFixed(1)}s / 视频时长 ${row.video_duration_seconds.toFixed(1)}s`"
+            placement="top"
+          >
+            <span>{{ (row.execution_seconds / row.video_duration_seconds).toFixed(2) }}×</span>
+          </el-tooltip>
+          <span v-else>—</span>
+        </template>
+      </el-table-column>
+
       <el-table-column label="进度" width="130">
         <template slot-scope="{ row }">
           <el-progress :percentage="row.progress_pct || 0" :stroke-width="6" />
@@ -174,12 +201,13 @@
             </el-descriptions-item>
             <el-descriptions-item label="教练">{{ drawer.task.coach_name || '—' }}</el-descriptions-item>
             <el-descriptions-item label="知识库版本">{{ drawer.task.knowledge_base_version || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="视频文件名" :span="2">{{ drawer.task.video_filename || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="视频时长">
-              {{ drawer.task.video_duration_seconds != null ? drawer.task.video_duration_seconds + ' 秒' : '—' }}
-            </el-descriptions-item>
             <el-descriptions-item label="进度">
               {{ drawer.task.progress_pct != null ? drawer.task.progress_pct + '%' : '—' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="分段进度">
+              {{ drawer.task.processed_segments != null && drawer.task.total_segments != null
+                ? `${drawer.task.processed_segments} / ${drawer.task.total_segments}`
+                : '—' }}
             </el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ formatTime(drawer.task.created_at) }}</el-descriptions-item>
             <el-descriptions-item label="开始处理">{{ formatTime(drawer.task.started_at) }}</el-descriptions-item>
@@ -189,6 +217,39 @@
             </el-descriptions-item>
             <el-descriptions-item v-if="drawer.task.rejection_reason" label="拒绝原因" :span="2">
               <span class="error-text">{{ drawer.task.rejection_reason }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="drawer.task.audio_fallback_reason" label="音频降级原因" :span="2">
+              <span class="error-text">{{ drawer.task.audio_fallback_reason }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <!-- 视频信息 -->
+          <el-descriptions title="视频信息" :column="2" border size="small" style="margin-bottom:20px">
+            <el-descriptions-item label="视频文件名" :span="2">
+              <span class="break-all">{{ drawer.task.video_filename || '—' }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="drawer.task.video_storage_uri" label="存储路径" :span="2">
+              <span class="break-all">{{ drawer.task.video_storage_uri }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="视频时长">{{ formatDuration(drawer.task.video_duration_seconds) }}</el-descriptions-item>
+            <el-descriptions-item label="分辨率">{{ drawer.task.video_resolution || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="帧率">{{ drawer.task.video_fps != null ? drawer.task.video_fps + ' fps' : '—' }}</el-descriptions-item>
+            <el-descriptions-item label="文件大小">{{ formatBytes(drawer.task.video_size_bytes) }}</el-descriptions-item>
+          </el-descriptions>
+
+          <!-- 执行耗时 -->
+          <el-descriptions title="执行耗时" :column="2" border size="small" style="margin-bottom:20px">
+            <el-descriptions-item label="执行总耗时">
+              <span :class="speedTagClass(drawer.task)">{{ formatDuration(drawer.task.execution_seconds) }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="实时倍率">
+              <template v-if="drawer.task.video_duration_seconds && drawer.task.execution_seconds">
+                {{ (drawer.task.execution_seconds / drawer.task.video_duration_seconds).toFixed(2) }}×
+                <span style="color:#909399;font-size:12px;margin-left:4px">
+                  （执行耗时 / 视频时长，&lt;1 为快于实时）
+                </span>
+              </template>
+              <template v-else>—</template>
             </el-descriptions-item>
           </el-descriptions>
 
@@ -212,7 +273,7 @@
           <!-- 耗时统计 -->
           <el-descriptions
             v-if="drawer.task.timing_stats && Object.keys(drawer.task.timing_stats).length"
-            title="耗时统计"
+            title="阶段耗时"
             :column="2"
             border
             size="small"
@@ -220,7 +281,7 @@
             <el-descriptions-item
               v-for="(value, key) in drawer.task.timing_stats"
               :key="key"
-              :label="key"
+              :label="timingStatLabel(key)"
             >{{ typeof value === 'number' ? value.toFixed(2) + ' 秒' : value }}</el-descriptions-item>
           </el-descriptions>
         </template>
@@ -268,6 +329,21 @@ const STATUS_LABEL_MAP = {
 const TASK_TYPE_LABEL_MAP = {
   expert_video: '教练视频',
   athlete_video: '运动员视频'
+}
+
+const TIMING_STAT_LABEL_MAP = {
+  total_s: '总耗时',
+  pre_split_s: '视频预分段',
+  kb_extraction_s: '知识库提取',
+  pose_estimation_s: '姿态估计',
+  audio_analysis_s: '音频分析',
+  asr_s: '语音识别',
+  segmentation_s: '语义分段',
+  motion_analysis_s: '动作分析',
+  advice_generation_s: '建议生成',
+  deviation_s: '偏差分析',
+  upload_s: '结果上传',
+  download_s: '视频下载'
 }
 
 export default {
@@ -326,6 +402,38 @@ export default {
     },
     taskTypeLabel(type) {
       return TASK_TYPE_LABEL_MAP[type] || type
+    },
+    timingStatLabel(key) {
+      return TIMING_STAT_LABEL_MAP[key] || key
+    },
+    formatDuration(seconds) {
+      if (seconds == null || isNaN(seconds)) return '—'
+      const s = Number(seconds)
+      if (s < 60) return s.toFixed(1) + ' 秒'
+      const mins = Math.floor(s / 60)
+      const remain = Math.round(s - mins * 60)
+      if (mins < 60) return `${mins}分${remain}秒`
+      const hours = Math.floor(mins / 60)
+      const m = mins - hours * 60
+      return `${hours}时${m}分${remain}秒`
+    },
+    formatBytes(bytes) {
+      if (bytes == null || bytes === 0) return '—'
+      const units = ['B', 'KB', 'MB', 'GB', 'TB']
+      let i = 0
+      let n = Number(bytes)
+      while (n >= 1024 && i < units.length - 1) {
+        n /= 1024
+        i++
+      }
+      return n.toFixed(n < 10 ? 2 : 1) + ' ' + units[i]
+    },
+    speedTagClass(row) {
+      if (!row.video_duration_seconds || !row.execution_seconds) return ''
+      const ratio = row.execution_seconds / row.video_duration_seconds
+      if (ratio < 0.5) return 'speed-fast'
+      if (ratio > 1.5) return 'speed-slow'
+      return ''
     },
     copyToClipboard(text) {
       if (!text) return
@@ -493,5 +601,16 @@ export default {
 .drawer-content {
   padding: 16px 20px;
   min-height: 200px;
+}
+.break-all {
+  word-break: break-all;
+}
+.speed-fast {
+  color: #67c23a;
+  font-weight: 600;
+}
+.speed-slow {
+  color: #e6a23c;
+  font-weight: 600;
 }
 </style>

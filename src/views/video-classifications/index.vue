@@ -307,6 +307,11 @@ export default {
       if (row.video_type !== 'tutorial') return '仅支持「教学视频」类型提交知识库提取'
       return ''
     },
+    coachIdByName(name) {
+      if (!name) return undefined
+      const hit = this.coachOptions.find(c => c.name === name)
+      return hit ? hit.id : undefined
+    },
     formatDate(isoStr) {
       if (!isoStr) return '—'
       return isoStr.replace('T', ' ').substring(0, 19)
@@ -384,6 +389,7 @@ export default {
       try {
         const res = await submitExpertVideo({
           cos_object_key: row.cos_object_key,
+          coach_id: this.coachIdByName(row.coach_name),
           enable_audio_analysis: true,
           audio_language: 'zh'
         })
@@ -399,16 +405,14 @@ export default {
     async handleBatchSubmit(scope) {
       if (scope === 'filtered') {
         // 按 key 精确提交前端筛选到的每一条（避免 batch-submit 按条件匹配扩大范围）
-        const keys = this.filteredList
-          .filter(v => v.video_type === 'tutorial')
-          .map(v => v.cos_object_key)
-        if (!keys.length) {
+        const rows = this.filteredList.filter(v => v.video_type === 'tutorial')
+        if (!rows.length) {
           this.$message.warning('当前筛选结果中没有教学视频')
           return
         }
         try {
           await this.$confirm(
-            `将按当前筛选结果精确提交 ${keys.length} 条教学视频，确认继续？`,
+            `将按当前筛选结果精确提交 ${rows.length} 条教学视频，确认继续？`,
             '确认批量提交',
             { type: 'warning', confirmButtonText: '确认提交', cancelButtonText: '取消' }
           )
@@ -420,10 +424,11 @@ export default {
         let okCount = 0
         let failCount = 0
         try {
-          for (const key of keys) {
+          for (const row of rows) {
             try {
               const res = await submitExpertVideo({
-                cos_object_key: key,
+                cos_object_key: row.cos_object_key,
+                coach_id: this.coachIdByName(row.coach_name),
                 enable_audio_analysis: true,
                 audio_language: 'zh'
               })
