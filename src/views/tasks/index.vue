@@ -83,7 +83,7 @@
 
       <el-table-column label="类型" width="110">
         <template slot-scope="{ row }">
-          <el-tag :type="row.task_type === 'expert_video' ? 'primary' : 'success'" size="small">
+          <el-tag :type="taskTypeTagType(row.task_type)" size="small">
             {{ taskTypeLabel(row.task_type) }}
           </el-tag>
         </template>
@@ -188,7 +188,7 @@
               />
             </el-descriptions-item>
             <el-descriptions-item label="任务类型">
-              <el-tag :type="drawer.task.task_type === 'expert_video' ? 'primary' : 'success'" size="small">
+              <el-tag :type="taskTypeTagType(drawer.task.task_type)" size="small">
                 {{ taskTypeLabel(drawer.task.task_type) }}
               </el-tag>
             </el-descriptions-item>
@@ -304,8 +304,10 @@ const STATUS_OPTIONS = [
 ]
 
 const TASK_TYPE_OPTIONS = [
-  { value: 'expert_video', label: '教练视频' },
-  { value: 'athlete_video', label: '运动员视频' }
+  { value: 'video_classification', label: '视频分类' },
+  { value: 'kb_extraction', label: '知识库提取' },
+  { value: 'athlete_diagnosis', label: '动作诊断' },
+  { value: 'video_preprocessing', label: '视频预处理' }
 ]
 
 const STATUS_TAG_MAP = {
@@ -327,8 +329,22 @@ const STATUS_LABEL_MAP = {
 }
 
 const TASK_TYPE_LABEL_MAP = {
+  video_classification: '视频分类',
+  kb_extraction: '知识库提取',
+  athlete_diagnosis: '动作诊断',
+  video_preprocessing: '视频预处理',
+  // 兼容旧记录展示
   expert_video: '教练视频',
   athlete_video: '运动员视频'
+}
+
+const TASK_TYPE_TAG_MAP = {
+  video_classification: 'info',
+  kb_extraction: 'primary',
+  athlete_diagnosis: 'success',
+  video_preprocessing: 'warning',
+  expert_video: 'primary',
+  athlete_video: 'success'
 }
 
 const TIMING_STAT_LABEL_MAP = {
@@ -403,6 +419,9 @@ export default {
     taskTypeLabel(type) {
       return TASK_TYPE_LABEL_MAP[type] || type
     },
+    taskTypeTagType(type) {
+      return TASK_TYPE_TAG_MAP[type] || 'info'
+    },
     timingStatLabel(key) {
       return TIMING_STAT_LABEL_MAP[key] || key
     },
@@ -458,9 +477,8 @@ export default {
     async loadCoachOptions() {
       this.coachLoading = true
       try {
-        const res = await listCoaches()
-        const coaches = Array.isArray(res) ? res : (res.data || res.items || [])
-        this.coachOptions = coaches.map(c => ({ value: c.id, label: c.name }))
+        const { data } = await listCoaches()
+        this.coachOptions = (data || []).map(c => ({ value: c.id, label: c.name }))
       } catch (e) {
         this.coachOptions = []
       } finally {
@@ -483,11 +501,10 @@ export default {
         if (this.filter.createdAfter) params.created_after = this.filter.createdAfter
         if (this.filter.createdBefore) params.created_before = this.filter.createdBefore
 
-        const res = await listTasks(params)
-        this.list = res.items || []
-        this.total = res.total || 0
+        const { data, meta } = await listTasks(params)
+        this.list = data || []
+        this.total = (meta && meta.total) || 0
       } catch (e) {
-        this.$message.error('加载失败，请刷新重试')
         this.list = []
         this.total = 0
       } finally {
@@ -552,8 +569,8 @@ export default {
       this.drawer.loading = true
       this.drawer.task = null
       try {
-        const res = await getTaskDetail(taskId)
-        this.drawer.task = res
+        const { data } = await getTaskDetail(taskId)
+        this.drawer.task = data
       } catch (e) {
         this.drawer.visible = false
       } finally {

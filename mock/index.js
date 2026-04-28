@@ -1,33 +1,15 @@
 const Mock = require('mockjs')
-const { param2Obj } = require('./utils')
 
 const user = require('./user')
-const role = require('./role')
-const article = require('./article')
-const search = require('./remote-search')
-const charPp = require('./charPp')
 
-const mocks = [
-  ...user,
-  ...role,
-  ...article,
-  ...search
-]
+// 所有非 /char-pp-api 前缀的接口都走 mock（登录、权限、用户管理等）
+const mocks = [...user]
 
-// charPp mocks 使用不同的 URL 前缀（/char-pp-api），单独导出供 mock-server 使用
-const charPpMocks = charPp
-
-// for front mock
-// please use it cautiously, it will redefine XMLHttpRequest,
-// which will cause many of your third-party libraries to be invalidated(like progress event).
 function mockXHR() {
-  // mock patch
-  // https://github.com/nuysoft/Mock/issues/300
   Mock.XHR.prototype.proxy_send = Mock.XHR.prototype.send
   Mock.XHR.prototype.send = function() {
     if (this.custom.xhr) {
       this.custom.xhr.withCredentials = this.withCredentials || false
-
       if (this.responseType) {
         this.custom.xhr.responseType = this.responseType
       }
@@ -40,11 +22,10 @@ function mockXHR() {
       let result = null
       if (respond instanceof Function) {
         const { body, type, url } = options
-        // https://expressjs.com/en/4x/api.html#req
         result = respond({
           method: type,
-          body: JSON.parse(body),
-          query: param2Obj(url)
+          body: body ? JSON.parse(body) : {},
+          query: parseQuery(url)
         })
       } else {
         result = respond
@@ -58,8 +39,15 @@ function mockXHR() {
   }
 }
 
-module.exports = {
-  mocks,
-  charPpMocks,
-  mockXHR
+function parseQuery(url) {
+  const search = url.split('?')[1]
+  if (!search) return {}
+  const obj = {}
+  for (const kv of search.split('&')) {
+    const [k, v] = kv.split('=')
+    if (k) obj[decodeURIComponent(k)] = v ? decodeURIComponent(v) : ''
+  }
+  return obj
 }
+
+module.exports = { mocks, mockXHR }

@@ -107,10 +107,10 @@ export default {
     async fetchList() {
       this.listLoading = true
       try {
-        const res = await listStandards()
-        this.list = res.standards || (Array.isArray(res) ? res : [])
+        const { data } = await listStandards()
+        this.list = (data && data.standards) || []
       } catch (e) {
-        // 错误由拦截器处理
+        this.list = []
       } finally {
         this.listLoading = false
       }
@@ -120,8 +120,8 @@ export default {
       this.detailData = null
       this.detailDialogVisible = true
       try {
-        const res = await getStandard(row.tech_category)
-        this.detailData = res.data || res
+        const { data } = await getStandard(row.tech_category)
+        this.detailData = data
       } catch (e) {
         this.detailDialogVisible = false
       }
@@ -133,14 +133,15 @@ export default {
     async submitBuild() {
       this.buildLoading = true
       try {
-        const data = this.buildCategory ? { tech_category: this.buildCategory } : {}
-        const res = await buildStandard(data)
-        const result = res.data || res
-        this.$message.success(result.message || `标准重建完成：成功 ${result.success} 个，跳过 ${result.skipped} 个，失败 ${result.failed} 个`)
+        const payload = this.buildCategory ? { tech_category: this.buildCategory } : {}
+        const { data } = await buildStandard(payload)
+        const msg = (data && data.message) ||
+          `标准重建完成：成功 ${(data && data.success) || 0} 个，跳过 ${(data && data.skipped) || 0} 个，失败 ${(data && data.failed) || 0} 个`
+        this.$message.success(msg)
         this.buildDialogVisible = false
         this.fetchList()
       } catch (e) {
-        // 错误由拦截器处理
+        // 拦截器已提示
       } finally {
         this.buildLoading = false
       }

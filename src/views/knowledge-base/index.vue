@@ -87,10 +87,10 @@ export default {
     async fetchList() {
       this.listLoading = true
       try {
-        const res = await listKnowledgeBaseVersions()
-        this.list = res.versions || (Array.isArray(res) ? res : [])
+        const { data } = await listKnowledgeBaseVersions()
+        this.list = (data && data.versions) || []
       } catch (e) {
-        // 错误由拦截器处理
+        this.list = []
       } finally {
         this.listLoading = false
       }

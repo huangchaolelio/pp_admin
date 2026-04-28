@@ -19,7 +19,7 @@
       </el-select>
     </div>
 
-    <el-table v-loading="listLoading" :data="pagedList" border fit highlight-current-row style="width: 100%">
+    <el-table v-loading="listLoading" :data="list" border fit highlight-current-row style="width: 100%">
       <el-table-column label="动作类型" width="150" align="center">
         <template slot-scope="{ row }">{{ actionTypeLabel(row.action_type) }}</template>
       </el-table-column>
@@ -52,10 +52,10 @@
       :current-page.sync="currentPage"
       :page-sizes="[10, 20, 50]"
       :page-size.sync="pageSize"
-      :total="list.length"
+      :total="total"
       layout="total, sizes, prev, pager, next, jumper"
-      @current-change="val => { currentPage = val }"
-      @size-change="val => { pageSize = val; currentPage = 1 }"
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
     />
 
     <el-empty v-if="!listLoading && list.length === 0" description="暂无教学提示数据" />
@@ -95,35 +95,47 @@ export default {
   data() {
     return {
       list: [],
+      total: 0,
       listLoading: false,
       filterActionType: '',
       currentPage: 1,
       pageSize: 20
     }
   },
-  computed: {
-    pagedList() {
-      const start = (this.currentPage - 1) * this.pageSize
-      return this.list.slice(start, start + this.pageSize)
-    }
-  },
+  computed: {},
   created() {
     this.fetchList()
   },
   methods: {
     async fetchList() {
-      this.currentPage = 1
       this.listLoading = true
-      const params = this.filterActionType ? { action_type: this.filterActionType } : {}
+      const params = {
+        page: this.currentPage,
+        page_size: this.pageSize
+      }
+      if (this.filterActionType) params.action_type = this.filterActionType
       try {
-        const res = await listTeachingTips(params)
-        this.list = Array.isArray(res) ? res : (res.items || res.data || [])
+        const { data, meta } = await listTeachingTips(params)
+        // data 可能是 { items, total } 或直接数组
+        if (Array.isArray(data)) {
+          this.list = data
+          this.total = (meta && meta.total) || data.length
+        } else if (data && Array.isArray(data.items)) {
+          this.list = data.items
+          this.total = (meta && meta.total) || data.total || data.items.length
+        } else {
+          this.list = []
+          this.total = 0
+        }
       } catch (e) {
-        // 错误由拦截器处理
+        this.list = []
+        this.total = 0
       } finally {
         this.listLoading = false
       }
     },
+    onPageChange(p) { this.currentPage = p; this.fetchList() },
+    onSizeChange(s) { this.pageSize = s; this.currentPage = 1; this.fetchList() },
     actionTypeLabel(key) {
       return ACTION_TYPE_LABEL_MAP[key] || key
     },

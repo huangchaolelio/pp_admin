@@ -79,10 +79,10 @@ export const asyncRoutes = [
   },
 
   {
-    path: '/video-classifications',
+    path: '/classifications',
     component: Layout,
-    redirect: '/video-classifications/index',
-    name: 'VideoClassifications',
+    redirect: '/classifications/index',
+    name: 'Classifications',
     meta: {
       title: '视频分类',
       icon: 'el-icon-video-camera',
@@ -91,9 +91,49 @@ export const asyncRoutes = [
     children: [
       {
         path: 'index',
-        component: () => import('@/views/video-classifications/index'),
-        name: 'VideoClassificationsIndex',
+        component: () => import('@/views/classifications/index'),
+        name: 'ClassificationsIndex',
         meta: { title: '视频分类管理', icon: 'el-icon-video-camera' }
+      }
+    ]
+  },
+
+  {
+    path: '/video-preprocessing',
+    component: Layout,
+    redirect: '/video-preprocessing/index',
+    name: 'VideoPreprocessing',
+    meta: {
+      title: '视频预处理',
+      icon: 'el-icon-film',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/video-preprocessing/index'),
+        name: 'VideoPreprocessingIndex',
+        meta: { title: '预处理作业', icon: 'el-icon-film' }
+      }
+    ]
+  },
+
+  {
+    path: '/extraction-jobs',
+    component: Layout,
+    redirect: '/extraction-jobs/index',
+    name: 'ExtractionJobs',
+    meta: {
+      title: 'KB 提取作业',
+      icon: 'el-icon-share',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/extraction-jobs/index'),
+        name: 'ExtractionJobsIndex',
+        meta: { title: 'KB 提取作业', icon: 'el-icon-share' }
       }
     ]
   },

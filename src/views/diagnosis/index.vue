@@ -5,31 +5,34 @@
       <el-col :span="10">
         <el-card>
           <div slot="header"><span>提交动作诊断</span></div>
-          <el-form ref="diagForm" :model="form" :rules="rules" label-width="90px">
-            <el-form-item label="视频路径" prop="video_path">
-              <el-input v-model="form.video_path" placeholder="请输入视频在 COS 中的路径" />
+          <el-form ref="diagForm" :model="form" :rules="rules" label-width="110px">
+            <el-form-item label="视频路径" prop="video_storage_uri">
+              <el-input v-model="form.video_storage_uri" placeholder="COS 对象键，例如 pytest/xxx.mp4" />
             </el-form-item>
-            <el-form-item label="技术类别" prop="tech_category">
-              <el-select v-model="form.tech_category" style="width: 100%">
-                <el-option label="正手攻球" value="forehand_attack" />
-                <el-option label="正手拉球" value="forehand_topspin" />
-                <el-option label="反手推挡" value="backhand_push" />
-                <el-option label="反手拉球" value="backhand_topspin" />
-              </el-select>
+            <el-form-item label="知识库版本">
+              <el-input v-model="form.knowledge_base_version" placeholder="可选，留空使用最新版本" />
             </el-form-item>
             <el-form-item>
               <el-button
                 type="primary"
-                :loading="diagLoading"
+                :loading="submitting || polling"
                 :disabled="charPpUnavailable"
-                @click="submitDiagnosis"
+                @click="handleSubmit"
               >提交诊断</el-button>
-              <el-button v-if="isTimeout" type="warning" @click="retryDiagnosis">点击重试</el-button>
+              <el-button v-if="taskId" @click="handleReset">重置</el-button>
             </el-form-item>
             <el-alert
-              v-if="isTimeout"
-              type="warning"
-              title="请求超时（>60s），请检查视频是否有效后重试"
+              v-if="taskId && polling"
+              type="info"
+              :title="`任务已提交：${taskId.substring(0,8)}… 正在后台处理（每 3s 轮询一次）`"
+              show-icon
+              :closable="false"
+              style="margin-top: 8px"
+            />
+            <el-alert
+              v-if="errorText"
+              type="error"
+              :title="errorText"
               show-icon
               :closable="false"
               style="margin-top: 8px"
@@ -43,25 +46,27 @@
         <el-card v-if="report">
           <div slot="header">
             <span>诊断报告</span>
-            <el-tag style="margin-left: 12px" type="primary">{{ techCategoryLabel(report.tech_category) }}</el-tag>
+            <el-tag v-if="report.tech_category" style="margin-left:12px" type="primary">
+              {{ report.tech_category }}
+            </el-tag>
           </div>
 
           <!-- 综合评分 -->
-          <div class="score-section">
+          <div v-if="report.overall_score != null" class="score-section">
             <el-progress
               type="circle"
-              :percentage="report.overall_score"
+              :percentage="Math.round(report.overall_score)"
               :color="scoreColor(report.overall_score)"
               :width="100"
             />
             <span class="score-label">综合评分</span>
           </div>
 
-          <!-- 维度卡片 -->
-          <div class="dimensions-section">
+          <!-- 各维度 -->
+          <div v-if="report.dimensions && report.dimensions.length" class="dimensions-section">
             <p class="section-title">各维度分析</p>
             <el-row :gutter="12">
-              <el-col v-for="dim in report.dimensions" :key="dim.name" :span="12" style="margin-bottom: 12px">
+              <el-col v-for="dim in report.dimensions" :key="dim.name" :span="12" style="margin-bottom:12px">
                 <el-card shadow="hover" class="dim-card">
                   <div class="dim-header">
                     <span class="dim-name">{{ dim.name }}</span>
@@ -69,7 +74,7 @@
                       {{ deviationLabel(dim.deviation_level) }}
                     </el-tag>
                   </div>
-                  <el-table :data="dimTableData(dim)" border size="mini" style="margin-top: 8px">
+                  <el-table :data="dimTableData(dim)" border size="mini" style="margin-top:8px">
                     <el-table-column label="测量值" prop="measured" />
                     <el-table-column label="理想值" prop="ideal" />
                     <el-table-column label="范围" prop="range" />
@@ -81,18 +86,13 @@
           </div>
 
           <!-- 优点 -->
-          <div v-if="report.strengths && report.strengths.length" class="strengths-section">
+          <div v-if="report.strengths && report.strengths.length" class="section">
             <p class="section-title">优点</p>
-            <el-tag
-              v-for="s in report.strengths"
-              :key="s"
-              type="success"
-              style="margin: 0 8px 8px 0"
-            >{{ s }}</el-tag>
+            <el-tag v-for="s in report.strengths" :key="s" type="success" style="margin:0 8px 8px 0">{{ s }}</el-tag>
           </div>
 
-          <!-- 改进建议 -->
-          <div v-if="report.improvements && report.improvements.length" class="improvements-section">
+          <!-- 建议 -->
+          <div v-if="report.improvements && report.improvements.length" class="section">
             <p class="section-title">总体改进建议</p>
             <el-alert
               v-for="(imp, i) in report.improvements"
@@ -101,97 +101,140 @@
               type="info"
               show-icon
               :closable="false"
-              style="margin-bottom: 8px"
+              style="margin-bottom:8px"
             />
           </div>
         </el-card>
-
-        <el-empty v-else-if="!diagLoading" description="提交诊断后将在此展示报告" />
+        <el-empty v-else-if="!submitting && !polling" description="提交诊断后将在此展示报告" />
       </el-col>
     </el-row>
-
-    <!-- 全屏加载遮罩 -->
-    <div v-if="diagLoading" v-loading="true" element-loading-text="正在分析动作，请稍候（最长约 60 秒）..." element-loading-background="rgba(0,0,0,0.6)" class="fullscreen-loading" />
   </div>
 </template>
 
 <script>
 import { mapState } from 'vuex'
-import { submitDiagnosis } from '@/api/diagnosis'
-import axios from 'axios'
+import { submitDiagnosisTask, getTaskDetail, getTaskResult } from '@/api/tasks'
+
+const POLL_INTERVAL_MS = 3000
+const POLL_TIMEOUT_MS = 10 * 60 * 1000 // 最多轮询 10 分钟
 
 export default {
   name: 'DiagnosisIndex',
   data() {
     return {
-      form: { video_path: '', tech_category: '' },
+      form: { video_storage_uri: '', knowledge_base_version: '' },
       rules: {
-        video_path: [{ required: true, message: '请输入视频路径', trigger: 'blur' }],
-        tech_category: [{ required: true, message: '请选择技术类别', trigger: 'change' }]
+        video_storage_uri: [{ required: true, message: '请输入视频路径', trigger: 'blur' }]
       },
-      diagLoading: false,
-      isTimeout: false,
-      report: null
+      submitting: false,
+      polling: false,
+      taskId: '',
+      errorText: '',
+      report: null,
+      pollTimer: null,
+      pollStartedAt: 0
     }
   },
   computed: {
     ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable })
   },
+  beforeDestroy() {
+    this.stopPolling()
+  },
   methods: {
-    submitDiagnosis() {
+    handleReset() {
+      this.stopPolling()
+      this.taskId = ''
+      this.report = null
+      this.errorText = ''
+    },
+    stopPolling() {
+      if (this.pollTimer) {
+        clearTimeout(this.pollTimer)
+        this.pollTimer = null
+      }
+      this.polling = false
+    },
+
+    handleSubmit() {
       this.$refs.diagForm.validate(async(valid) => {
         if (!valid) return
-        this.diagLoading = true
-        this.isTimeout = false
+        this.submitting = true
+        this.errorText = ''
         this.report = null
+        this.taskId = ''
         try {
-          const res = await submitDiagnosis({
-            video_path: this.form.video_path,
-            tech_category: this.form.tech_category
+          const { data } = await submitDiagnosisTask({
+            video_storage_uri: this.form.video_storage_uri,
+            knowledge_base_version: this.form.knowledge_base_version || null
           })
-          this.report = res.data || res
-        } catch (e) {
-          if (e.code === 'ECONNABORTED' || axios.isCancel(e)) {
-            // 超时：保留表单输入
-            this.isTimeout = true
+          // 批量接口返回 items[0]；单条接口可能直接返回；兼容两种
+          const item = (data && data.items && data.items[0]) || data || {}
+          const tid = item.task_id || item.existing_task_id
+          if (!tid) {
+            this.errorText = item.rejection_message || '未能提交：未获取到 task_id'
+            return
           }
-          // 其他错误已在拦截器中提示，表单不清空
+          this.taskId = tid
+          this.startPolling()
+        } catch (e) {
+          // 拦截器已提示
         } finally {
-          this.diagLoading = false
+          this.submitting = false
         }
       })
     },
-    retryDiagnosis() {
-      this.isTimeout = false
-      this.submitDiagnosis()
+
+    startPolling() {
+      this.polling = true
+      this.pollStartedAt = Date.now()
+      this.pollOnce()
     },
+
+    async pollOnce() {
+      if (!this.taskId || !this.polling) return
+      if (Date.now() - this.pollStartedAt > POLL_TIMEOUT_MS) {
+        this.errorText = '诊断超时（>10 分钟），请到任务监控页查看详情'
+        this.stopPolling()
+        return
+      }
+      try {
+        const { data: detail } = await getTaskDetail(this.taskId)
+        const status = detail && detail.status
+        if (status === 'success' || status === 'partial_success') {
+          const { data: result } = await getTaskResult(this.taskId)
+          this.report = result || {}
+          this.stopPolling()
+          return
+        }
+        if (status === 'failed' || status === 'rejected') {
+          this.errorText = (detail && (detail.error_message || detail.rejection_reason)) ||
+            `任务状态：${status}`
+          this.stopPolling()
+          return
+        }
+      } catch (e) {
+        // 拦截器已提示；继续轮询（可能是临时网络抖动）
+      }
+      this.pollTimer = setTimeout(() => this.pollOnce(), POLL_INTERVAL_MS)
+    },
+
     scoreColor(score) {
       if (score >= 80) return '#67C23A'
       if (score >= 60) return '#E6A23C'
       return '#F56C6C'
     },
     deviationTagType(level) {
-      const map = { normal: 'success', minor: 'warning', significant: 'danger' }
-      return map[level] || 'info'
+      return ({ normal: 'success', minor: 'warning', significant: 'danger' })[level] || 'info'
     },
     deviationLabel(level) {
-      const map = { normal: '正常', minor: '轻度偏差', significant: '明显偏差' }
-      return map[level] || level
-    },
-    techCategoryLabel(key) {
-      const map = {
-        forehand_attack: '正手攻球',
-        forehand_topspin: '正手拉球',
-        backhand_push: '反手推挡',
-        backhand_topspin: '反手拉球'
-      }
-      return map[key] || key
+      return ({ normal: '正常', minor: '轻度偏差', significant: '明显偏差' })[level] || level
     },
     dimTableData(dim) {
       return [{
-        measured: `${dim.measured_value}`,
-        ideal: `${dim.ideal}`,
-        range: `${dim.min} ~ ${dim.max}`
+        measured: `${dim.measured_value != null ? dim.measured_value : '—'}`,
+        ideal: `${dim.ideal != null ? dim.ideal : '—'}`,
+        range: `${dim.min != null ? dim.min : '—'} ~ ${dim.max != null ? dim.max : '—'}`
       }]
     }
   }
@@ -205,43 +248,12 @@ export default {
   gap: 16px;
   margin-bottom: 20px;
 }
-.score-label {
-  font-size: 16px;
-  color: #606266;
-}
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0 0 12px;
-}
-.dim-card {
-  height: 100%;
-}
-.dim-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.dim-name {
-  font-weight: 600;
-  font-size: 13px;
-}
-.dim-suggestion {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #E6A23C;
-  line-height: 1.5;
-}
+.score-label { font-size: 16px; color: #606266; }
+.section-title { font-size: 14px; font-weight: 600; color: #303133; margin: 0 0 12px; }
+.section { margin-bottom: 16px; }
+.dim-card { height: 100%; }
+.dim-header { display: flex; justify-content: space-between; align-items: center; }
+.dim-name { font-weight: 600; font-size: 13px; }
+.dim-suggestion { margin: 8px 0 0; font-size: 12px; color: #E6A23C; line-height: 1.5; }
 .dimensions-section { margin-bottom: 16px; }
-.strengths-section { margin-bottom: 16px; }
-.improvements-section { margin-bottom: 8px; }
-.fullscreen-loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9999;
-}
 </style>

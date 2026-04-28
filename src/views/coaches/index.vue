@@ -18,7 +18,13 @@
       highlight-current-row
       style="width: 100%"
     >
-      <el-table-column label="ID" prop="id" width="80" align="center" />
+      <el-table-column label="ID" prop="id" width="120" align="center">
+        <template slot-scope="{ row }">
+          <el-tooltip :content="row.id" placement="top">
+            <span class="id-cell">{{ row.id ? row.id.substring(0, 8) : '—' }}</span>
+          </el-tooltip>
+        </template>
+      </el-table-column>
       <el-table-column label="教练名称" prop="name" min-width="120" />
       <el-table-column label="简介" prop="bio" min-width="200">
         <template slot-scope="{ row }">
@@ -132,11 +138,9 @@ export default {
       this.currentPage = 1
       this.listLoading = true
       try {
-        const res = await listCoaches({ include_inactive: this.showInactive || undefined })
-        const data = res.data || res
+        const { data } = await listCoaches({ include_inactive: this.showInactive || undefined })
         this.list = Array.isArray(data) ? data : []
         this.lastLoadedList = [...this.list]
-        this.$store.commit('app/SET_CHAR_PP_UNAVAILABLE', false)
       } catch (e) {
         if (this.lastLoadedList.length) {
           this.list = [...this.lastLoadedList]
@@ -207,5 +211,10 @@ export default {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+}
+.id-cell {
+  font-family: monospace;
+  font-size: 12px;
+  color: #606266;
 }
 </style>
