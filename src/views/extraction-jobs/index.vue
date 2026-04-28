@@ -250,7 +250,11 @@ export default {
     ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable })
   },
   created() {
-    this.fetchList()
+    this.fetchList().then(() => {
+      // 支持通过 ?job=<uuid> 直接打开详情（从知识库版本页跳转）
+      const jobId = this.$route.query.job
+      if (jobId) this.handleViewDetail({ job_id: jobId })
+    })
   },
   methods: {
     async fetchList() {
