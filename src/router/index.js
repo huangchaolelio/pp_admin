@@ -179,6 +179,26 @@ export const asyncRoutes = [
   },
 
   {
+    path: '/channels',
+    component: Layout,
+    redirect: '/channels/index',
+    name: 'Channels',
+    meta: {
+      title: '通道管理',
+      icon: 'el-icon-connection',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/channels/index'),
+        name: 'ChannelsIndex',
+        meta: { title: '通道管理', icon: 'el-icon-connection' }
+      }
+    ]
+  },
+
+  {
     path: '/standards',
     component: Layout,
     redirect: '/standards/index',

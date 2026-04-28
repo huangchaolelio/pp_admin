@@ -88,6 +88,7 @@
       <el-table-column label="操作" width="180" fixed="right">
         <template slot-scope="{ row }">
           <el-button size="mini" :disabled="charPpUnavailable" @click="handleEdit(row)">编辑</el-button>
+          <el-button size="mini" type="primary" :disabled="charPpUnavailable" :loading="submittingId === row.id" @click="handleSubmitPreprocess(row)">预处理</el-button>
           <el-button size="mini" type="primary" :disabled="charPpUnavailable" :loading="submittingId === row.id" @click="handleSubmitKb(row)">KB 提取</el-button>
         </template>
       </el-table-column>
@@ -141,7 +142,7 @@ import {
   scanClassifications
 } from '@/api/classifications'
 import { submitKbExtraction, submitKbExtractionBatch } from '@/api/tasks'
-import { submitPreprocessingBatch } from '@/api/videoPreprocessing'
+import { submitPreprocessing, submitPreprocessingBatch } from '@/api/videoPreprocessing'
 import { listCoaches } from '@/api/coaches'
 import TaskIdListDialog from '@/components/TaskIdListDialog'
 
@@ -404,6 +405,30 @@ export default {
         )
       } finally {
         this.preprocessLoading = false
+      }
+    },
+
+    // 单条预处理
+    async handleSubmitPreprocess(row) {
+      try {
+        await this.$confirm(`将提交预处理任务\n${row.cos_object_key}`, '确认', { type: 'info' })
+      } catch { return }
+      this.submittingId = row.id
+      try {
+        const { data } = await submitPreprocessing({
+          cos_object_key: row.cos_object_key,
+          force: false
+        })
+        const tid = (data && data.task_id) || ''
+        if (tid) {
+          this.$message.success(`已提交：${tid.substring(0, 8)}…`)
+        } else {
+          this.$message.warning('提交失败')
+        }
+      } catch (e) {
+        // 拦截器已提示
+      } finally {
+        this.submittingId = ''
       }
     }
   }
