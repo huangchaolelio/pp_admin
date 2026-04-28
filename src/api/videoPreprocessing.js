@@ -20,3 +20,9 @@ export function submitPreprocessingBatch(data) {
 export function getPreprocessingJob(jobId) {
   return request({ url: `/api/v1/video-preprocessing/${jobId}`, method: 'get' })
 }
+
+// 预处理作业列表
+// params: { page?, page_size?, status?, cos_object_key?, sort_by?, order? }
+export function listPreprocessingJobs(params) {
+  return request({ url: '/api/v1/video-preprocessing', method: 'get', params })
+}

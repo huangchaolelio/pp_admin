@@ -128,7 +128,7 @@
           <span class="mono">{{ lastSingleResult.job_id }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="lastSingleResult.status === 'success' ? 'success' : 'primary'" size="mini">
+          <el-tag :type="jobStatusType(lastSingleResult.status)" size="mini">
             {{ lastSingleResult.status }}{{ lastSingleResult.reused ? ' · reused' : '' }}
           </el-tag>
         </el-descriptions-item>
@@ -145,23 +145,172 @@
       </div>
     </el-card>
 
-    <!-- 作业查询 -->
+    <!-- 作业列表 -->
+    <el-card shadow="never" class="section-card">
+      <div slot="header" class="list-header">
+        <div>
+          <span class="card-title">预处理作业列表</span>
+          <span class="card-desc">按时间倒序浏览全部预处理 job，可按状态 / COS key 过滤。</span>
+        </div>
+        <div>
+          <el-switch
+            v-model="autoRefresh"
+            active-text="自动刷新(10s)"
+            @change="onAutoRefreshChange"
+          />
+          <el-button
+            style="margin-left: 12px"
+            icon="el-icon-refresh"
+            size="small"
+            :loading="listLoading"
+            @click="fetchList"
+          >刷新</el-button>
+        </div>
+      </div>
+
+      <!-- 过滤条件 -->
+      <el-form :inline="true" size="small" class="filter-form" @submit.native.prevent>
+        <el-form-item label="状态">
+          <el-select v-model="listQuery.status" clearable placeholder="全部" style="width:140px" @change="handleFilterChange">
+            <el-option label="running" value="running" />
+            <el-option label="success" value="success" />
+            <el-option label="failed" value="failed" />
+            <el-option label="superseded" value="superseded" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="COS Key">
+          <el-input
+            v-model="listQuery.cos_object_key"
+            placeholder="精确匹配"
+            clearable
+            style="width: 320px"
+            @clear="handleFilterChange"
+            @keyup.enter.native="handleFilterChange"
+          />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-select v-model="listQuery.sort_by" style="width:140px" @change="handleFilterChange">
+            <el-option label="开始时间" value="started_at" />
+            <el-option label="完成时间" value="completed_at" />
+            <el-option label="创建时间" value="created_at" />
+          </el-select>
+          <el-select v-model="listQuery.order" style="width:90px; margin-left:6px" @change="handleFilterChange">
+            <el-option label="倒序" value="desc" />
+            <el-option label="正序" value="asc" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" size="small" @click="handleFilterChange">查询</el-button>
+          <el-button size="small" @click="handleResetFilter">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <!-- 状态统计小胶囊 -->
+      <div class="stats-row">
+        <el-tag size="mini">共 {{ listTotal }} 条</el-tag>
+        <el-tag v-if="statusCount.running" type="primary" size="mini">running {{ statusCount.running }}</el-tag>
+        <el-tag v-if="statusCount.success" type="success" size="mini">success {{ statusCount.success }}</el-tag>
+        <el-tag v-if="statusCount.failed" type="danger" size="mini">failed {{ statusCount.failed }}</el-tag>
+        <el-tag v-if="statusCount.superseded" type="info" size="mini">superseded {{ statusCount.superseded }}</el-tag>
+      </div>
+
+      <el-table
+        v-loading="listLoading"
+        :data="jobList"
+        border
+        size="small"
+        style="margin-top: 8px"
+        :row-class-name="rowClassName"
+      >
+        <el-table-column label="Job ID" width="110">
+          <template slot-scope="{ row }">
+            <el-tooltip :content="row.job_id" placement="top">
+              <span class="mono">{{ row.job_id.substring(0, 8) }}…</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template slot-scope="{ row }">
+            <el-tag :type="jobStatusType(row.status)" size="mini">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="视频文件" min-width="260">
+          <template slot-scope="{ row }">
+            <el-tooltip :content="row.cos_object_key" placement="top-start">
+              <span class="cell-path">{{ shortCosKey(row.cos_object_key) }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column label="分段" width="70" align="center">
+          <template slot-scope="{ row }">{{ row.segment_count == null ? '—' : row.segment_count }}</template>
+        </el-table-column>
+        <el-table-column label="音频" width="70" align="center">
+          <template slot-scope="{ row }">
+            <i v-if="row.has_audio" class="el-icon-check" style="color:#67C23A" />
+            <i v-else class="el-icon-close" style="color:#C0C4CC" />
+          </template>
+        </el-table-column>
+        <el-table-column label="耗时" width="90" align="right">
+          <template slot-scope="{ row }">{{ formatDuration(row.duration_ms) }}</template>
+        </el-table-column>
+        <el-table-column label="force" width="70" align="center">
+          <template slot-scope="{ row }">
+            <el-tag v-if="row.force" size="mini" type="warning">force</el-tag>
+            <span v-else style="color:#C0C4CC">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="开始时间" width="160">
+          <template slot-scope="{ row }">{{ formatDate(row.started_at) }}</template>
+        </el-table-column>
+        <el-table-column label="完成时间" width="160">
+          <template slot-scope="{ row }">{{ formatDate(row.completed_at) }}</template>
+        </el-table-column>
+        <el-table-column label="错误" min-width="180">
+          <template slot-scope="{ row }">
+            <el-tooltip v-if="row.error_message" :content="row.error_message" placement="top-start">
+              <span class="err-msg">{{ shortError(row.error_message) }}</span>
+            </el-tooltip>
+            <span v-else style="color:#C0C4CC">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" align="center" fixed="right">
+          <template slot-scope="{ row }">
+            <el-button type="text" size="mini" @click="handleQueryJob(row.job_id)">详情</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-pagination
+        style="margin-top: 12px; text-align: right"
+        :current-page.sync="listQuery.page"
+        :page-size.sync="listQuery.page_size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="listTotal"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="fetchList"
+        @size-change="fetchList"
+      />
+    </el-card>
+
+    <!-- 作业详情 -->
     <el-card shadow="never" class="section-card">
       <div slot="header">
-        <span class="card-title">查询作业详情</span>
-        <span class="card-desc">输入预处理 job_id，查看原视频元数据、标准化参数、分段列表和音频。</span>
+        <span class="card-title">作业详情</span>
+        <span class="card-desc">点击列表中的"详情"或手动输入 job_id。</span>
       </div>
-      <el-form :inline="true" label-width="80px" @submit.native.prevent>
+      <el-form :inline="true" size="small" label-width="80px" @submit.native.prevent>
         <el-form-item label="Job ID">
           <el-input v-model="queryJobId" placeholder="UUID" clearable style="width: 360px" />
         </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
+            size="small"
             :loading="queryLoading"
             :disabled="!queryJobId || charPpUnavailable"
             @click="handleQueryJob(queryJobId)"
           >查询</el-button>
+          <el-button v-if="jobDetail" size="small" @click="jobDetail = null">清除</el-button>
         </el-form-item>
       </el-form>
 
@@ -249,7 +398,8 @@ import { mapState } from 'vuex'
 import {
   submitPreprocessing,
   submitPreprocessingBatch,
-  getPreprocessingJob
+  getPreprocessingJob,
+  listPreprocessingJobs
 } from '@/api/videoPreprocessing'
 
 const JOB_STATUS_TYPE = {
@@ -271,6 +421,23 @@ export default {
       batchForce: false,
       batchSubmitting: false,
       batchResults: null,
+
+      // 列表
+      jobList: [],
+      listTotal: 0,
+      listLoading: false,
+      listQuery: {
+        page: 1,
+        page_size: 20,
+        status: '',
+        cos_object_key: '',
+        sort_by: 'started_at',
+        order: 'desc'
+      },
+      autoRefresh: false,
+      refreshTimer: null,
+
+      // 详情
       queryJobId: '',
       queryLoading: false,
       jobDetail: null
@@ -283,7 +450,20 @@ export default {
         .split('\n')
         .map(s => s.trim())
         .filter(s => s.length > 0)
+    },
+    statusCount() {
+      const counter = { running: 0, success: 0, failed: 0, superseded: 0 }
+      this.jobList.forEach(j => {
+        if (counter[j.status] != null) counter[j.status] += 1
+      })
+      return counter
     }
+  },
+  created() {
+    this.fetchList()
+  },
+  beforeDestroy() {
+    this.stopAutoRefresh()
   },
   methods: {
     async handleSubmitSingle() {
@@ -301,6 +481,8 @@ export default {
           const { data } = await submitPreprocessing(payload)
           this.lastSingleResult = data
           this.$message.success(data && data.reused ? '命中已有作业（reused）' : '提交成功')
+          // 刷新列表
+          this.fetchList()
         } catch (e) {
           // 拦截器已提示
         } finally {
@@ -329,12 +511,86 @@ export default {
         const reused = (data && data.reused) || 0
         const failed = (data && data.failed) || 0
         this.$message.success(`已处理 ${submitted} 条（reused=${reused}, failed=${failed}）`)
+        // 刷新列表
+        this.fetchList()
       } catch (e) {
         // 拦截器已提示
       } finally {
         this.batchSubmitting = false
       }
     },
+
+    // 列表加载
+    async fetchList() {
+      this.listLoading = true
+      try {
+        const params = {
+          page: this.listQuery.page,
+          page_size: this.listQuery.page_size,
+          sort_by: this.listQuery.sort_by,
+          order: this.listQuery.order
+        }
+        if (this.listQuery.status) params.status = this.listQuery.status
+        if (this.listQuery.cos_object_key) params.cos_object_key = this.listQuery.cos_object_key
+        const { data, meta } = await listPreprocessingJobs(params)
+        this.jobList = data || []
+        this.listTotal = (meta && meta.total) || 0
+      } catch (e) {
+        this.jobList = []
+        this.listTotal = 0
+      } finally {
+        this.listLoading = false
+      }
+    },
+    handleFilterChange() {
+      this.listQuery.page = 1
+      this.fetchList()
+    },
+    handleResetFilter() {
+      this.listQuery = {
+        page: 1,
+        page_size: this.listQuery.page_size,
+        status: '',
+        cos_object_key: '',
+        sort_by: 'started_at',
+        order: 'desc'
+      }
+      this.fetchList()
+    },
+    onAutoRefreshChange(val) {
+      if (val) {
+        this.refreshTimer = setInterval(() => {
+          // 仅当未在加载时才触发
+          if (!this.listLoading) this.fetchList()
+        }, 10000)
+      } else {
+        this.stopAutoRefresh()
+      }
+    },
+    stopAutoRefresh() {
+      if (this.refreshTimer) {
+        clearInterval(this.refreshTimer)
+        this.refreshTimer = null
+      }
+    },
+    rowClassName({ row }) {
+      if (row.status === 'failed') return 'row-failed'
+      if (row.status === 'running') return 'row-running'
+      return ''
+    },
+    shortCosKey(key) {
+      if (!key) return '—'
+      // 取最后两级路径展示
+      const parts = key.split('/')
+      if (parts.length <= 2) return key
+      return '…/' + parts.slice(-2).join('/')
+    },
+    shortError(msg) {
+      if (!msg) return ''
+      return msg.length > 60 ? msg.substring(0, 60) + '…' : msg
+    },
+
+    // 详情
     async handleQueryJob(jobId) {
       if (!jobId) return
       this.queryJobId = jobId
@@ -343,6 +599,13 @@ export default {
       try {
         const { data } = await getPreprocessingJob(jobId)
         this.jobDetail = data
+        // 滚动到详情区
+        this.$nextTick(() => {
+          const el = document.querySelector('.job-detail')
+          if (el && el.scrollIntoView) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        })
       } catch (e) {
         // 拦截器已提示
       } finally {
@@ -434,5 +697,32 @@ export default {
   margin: 0 0 8px;
   font-size: 14px;
   color: #303133;
+}
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.filter-form {
+  padding: 8px 0 0;
+}
+.stats-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.stats-row .el-tag {
+  margin-right: 0;
+}
+</style>
+
+<style>
+/* 行高亮（非 scoped，保证作用于 el-table 内部） */
+.el-table .row-failed td {
+  background: #fef0f0 !important;
+}
+.el-table .row-running td {
+  background: #ecf5ff !important;
 }
 </style>

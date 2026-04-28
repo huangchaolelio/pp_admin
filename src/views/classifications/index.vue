@@ -419,11 +419,15 @@ export default {
           cos_object_key: row.cos_object_key,
           force: false
         })
-        const tid = (data && data.task_id) || ''
-        if (tid) {
-          this.$message.success(`已提交：${tid.substring(0, 8)}…`)
+        // 后端返回 { job_id, status, reused, ... }
+        const jobId = (data && data.job_id) || ''
+        const short = jobId ? jobId.substring(0, 8) + '…' : ''
+        if (data && data.reused) {
+          this.$message.info(jobId ? `已复用现有作业：${short}` : '已复用现有作业')
+        } else if (jobId) {
+          this.$message.success(`已提交：${short}`)
         } else {
-          this.$message.warning('提交失败')
+          this.$message.warning('提交未返回作业 ID')
         }
       } catch (e) {
         // 拦截器已提示
