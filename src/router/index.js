@@ -55,25 +55,32 @@ export const constantRoutes = [
 /**
  * asyncRoutes
  * 需要根据用户角色动态加载的路由
- * super_admin 和 admin 均可访问所有菜单（无差异）
+ *
+ * 菜单顺序遵循乒乓 AI 后端业务流水线：
+ *   ① 内容基础：教练管理 → 视频分类管理
+ *   ② 处理流水线：视频预处理 → KB 提取作业
+ *   ③ 知识产出：知识库（版本 + 教学提示）→ 技术标准 → 动作诊断
+ *   ④ 运维监控：任务监控 → 通道管理
+ *   ⑤ 系统管理：用户管理（super_admin 专属，放最后）
  */
 export const asyncRoutes = [
+  // ── ① 内容基础数据 ────────────────────────────────────
   {
-    path: '/user',
+    path: '/coaches',
     component: Layout,
-    redirect: '/user/list',
-    name: 'User',
+    redirect: '/coaches/index',
+    name: 'Coaches',
     meta: {
-      title: '用户管理',
-      icon: 'user',
-      roles: ['super_admin']
+      title: '教练管理',
+      icon: 'el-icon-trophy',
+      roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'list',
-        component: () => import('@/views/user/list/index'),
-        name: 'UserList',
-        meta: { title: '用户列表', icon: 'user' }
+        path: 'index',
+        component: () => import('@/views/coaches/index'),
+        name: 'CoachesIndex',
+        meta: { title: '教练管理', icon: 'el-icon-trophy' }
       }
     ]
   },
@@ -98,6 +105,7 @@ export const asyncRoutes = [
     ]
   },
 
+  // ── ② 处理流水线 ────────────────────────────────────
   {
     path: '/video-preprocessing',
     component: Layout,
@@ -138,62 +146,30 @@ export const asyncRoutes = [
     ]
   },
 
+  // ── ③ 知识产出（KB → 技术标准 → 动作诊断） ─────────────
   {
-    path: '/coaches',
+    path: '/knowledge-base',
     component: Layout,
-    redirect: '/coaches/index',
-    name: 'Coaches',
+    redirect: '/knowledge-base/list',
+    name: 'KnowledgeBase',
+    alwaysShow: true,
     meta: {
-      title: '教练管理',
-      icon: 'el-icon-trophy',
+      title: '知识库',
+      icon: 'el-icon-reading',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'index',
-        component: () => import('@/views/coaches/index'),
-        name: 'CoachesIndex',
-        meta: { title: '教练管理', icon: 'el-icon-trophy' }
-      }
-    ]
-  },
-
-  {
-    path: '/tasks',
-    component: Layout,
-    redirect: '/tasks/index',
-    name: 'Tasks',
-    meta: {
-      title: '任务监控',
-      icon: 'el-icon-time',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
+        path: 'list',
+        component: () => import('@/views/knowledge-base/index'),
+        name: 'KnowledgeBaseList',
+        meta: { title: '知识库版本', icon: 'el-icon-collection' }
+      },
       {
-        path: 'index',
-        component: () => import('@/views/tasks/index'),
-        name: 'TasksIndex',
-        meta: { title: '任务监控', icon: 'el-icon-time' }
-      }
-    ]
-  },
-
-  {
-    path: '/channels',
-    component: Layout,
-    redirect: '/channels/index',
-    name: 'Channels',
-    meta: {
-      title: '通道管理',
-      icon: 'el-icon-connection',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/channels/index'),
-        name: 'ChannelsIndex',
-        meta: { title: '通道管理', icon: 'el-icon-connection' }
+        path: 'teaching-tips',
+        component: () => import('@/views/knowledge-base/teaching-tips'),
+        name: 'TeachingTips',
+        meta: { title: '教学提示', icon: 'el-icon-chat-line-round' }
       }
     ]
   },
@@ -238,29 +214,64 @@ export const asyncRoutes = [
     ]
   },
 
+  // ── ④ 运维监控 ────────────────────────────────────
   {
-    path: '/knowledge-base',
+    path: '/tasks',
     component: Layout,
-    redirect: '/knowledge-base/list',
-    name: 'KnowledgeBase',
-    alwaysShow: true,
+    redirect: '/tasks/index',
+    name: 'Tasks',
     meta: {
-      title: '知识库',
-      icon: 'el-icon-reading',
+      title: '任务监控',
+      icon: 'el-icon-time',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'list',
-        component: () => import('@/views/knowledge-base/index'),
-        name: 'KnowledgeBaseList',
-        meta: { title: '知识库版本', icon: 'el-icon-collection' }
-      },
+        path: 'index',
+        component: () => import('@/views/tasks/index'),
+        name: 'TasksIndex',
+        meta: { title: '任务监控', icon: 'el-icon-time' }
+      }
+    ]
+  },
+
+  {
+    path: '/channels',
+    component: Layout,
+    redirect: '/channels/index',
+    name: 'Channels',
+    meta: {
+      title: '通道管理',
+      icon: 'el-icon-connection',
+      roles: ['super_admin', 'admin']
+    },
+    children: [
       {
-        path: 'teaching-tips',
-        component: () => import('@/views/knowledge-base/teaching-tips'),
-        name: 'TeachingTips',
-        meta: { title: '教学提示', icon: 'el-icon-chat-line-round' }
+        path: 'index',
+        component: () => import('@/views/channels/index'),
+        name: 'ChannelsIndex',
+        meta: { title: '通道管理', icon: 'el-icon-connection' }
+      }
+    ]
+  },
+
+  // ── ⑤ 系统管理（super_admin 专属） ─────────────────
+  {
+    path: '/user',
+    component: Layout,
+    redirect: '/user/list',
+    name: 'User',
+    meta: {
+      title: '用户管理',
+      icon: 'user',
+      roles: ['super_admin']
+    },
+    children: [
+      {
+        path: 'list',
+        component: () => import('@/views/user/list/index'),
+        name: 'UserList',
+        meta: { title: '用户列表', icon: 'user' }
       }
     ]
   },

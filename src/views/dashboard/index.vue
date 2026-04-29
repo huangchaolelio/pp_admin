@@ -174,15 +174,16 @@ export default {
       recentTasks: [],
       recentTasksLoading: false,
       quickLinks: [
+        { title: '教练管理', path: '/coaches', icon: 'el-icon-trophy' },
         { title: '视频分类管理', path: '/classifications', icon: 'el-icon-video-camera' },
         { title: '视频预处理', path: '/video-preprocessing', icon: 'el-icon-film' },
         { title: 'KB 提取作业', path: '/extraction-jobs', icon: 'el-icon-share' },
-        { title: '任务监控', path: '/tasks', icon: 'el-icon-time' },
-        { title: '通道管理', path: '/channels', icon: 'el-icon-connection' },
-        { title: '教练管理', path: '/coaches', icon: 'el-icon-trophy' },
+        { title: '知识库版本', path: '/knowledge-base/list', icon: 'el-icon-reading' },
+        { title: '教学提示', path: '/knowledge-base/teaching-tips', icon: 'el-icon-chat-line-round' },
         { title: '技术标准', path: '/standards', icon: 'el-icon-data-analysis' },
         { title: '动作诊断', path: '/diagnosis', icon: 'el-icon-cpu' },
-        { title: '知识库版本', path: '/knowledge-base/list', icon: 'el-icon-reading' }
+        { title: '任务监控', path: '/tasks', icon: 'el-icon-time' },
+        { title: '通道管理', path: '/channels', icon: 'el-icon-connection' }
       ]
     }
   },
