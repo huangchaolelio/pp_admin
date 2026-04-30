@@ -2,15 +2,16 @@
   <div class="app-container">
     <el-alert
       v-if="!listLoading && list.length === 0 && !filterActionType"
-      title="教学提示需要手动触发抽取"
+      title="教学提示需要从 KB 提取作业触发"
       type="info"
       show-icon
       :closable="false"
       style="margin-bottom: 16px"
     >
       <div>
-        当前 KB 提取作业流水线暂不会自动产出教学提示。若需为已完成的专家视频任务生成教学提示，请在右上方点击
-        <b>手动抽取</b>，输入对应的 <code>task_id</code>（可在"任务监控"页找到 KB 抽取任务）。
+        KB 提取流水线暂不会自动产出教学提示。请前往
+        <el-link type="primary" @click="$router.push('/extraction-jobs')">KB 提取作业</el-link>
+        页面，在 <b>success</b> 状态的作业行点击「抽取教学提示」按钮即可。
       </div>
     </el-alert>
 
@@ -20,7 +21,7 @@
       </el-select>
       <el-button size="small" icon="el-icon-refresh" @click="fetchList">刷新</el-button>
       <span class="summary-hint">共 <b>{{ total }}</b> 条教学提示</span>
-      <el-button type="primary" size="small" icon="el-icon-magic-stick" style="margin-left: auto" @click="openExtract">手动抽取</el-button>
+      <el-button type="primary" size="small" icon="el-icon-magic-stick" style="margin-left: auto" @click="$router.push('/extraction-jobs')">去 KB 作业抽取</el-button>
     </div>
 
     <el-table v-loading="listLoading" :data="list" border fit highlight-current-row style="width: 100%">
@@ -68,31 +69,11 @@
     />
 
     <el-empty v-if="!listLoading && list.length === 0 && filterActionType" description="此动作类型暂无教学提示" />
-
-    <!-- 手动抽取对话框 -->
-    <el-dialog title="手动抽取教学提示" :visible.sync="extractVisible" width="520px">
-      <el-form :model="extractForm" label-width="90px" size="small">
-        <el-form-item label="task_id">
-          <el-input v-model="extractForm.taskId" placeholder="粘贴 KB 抽取任务的 task_id (UUID)" clearable />
-        </el-form-item>
-        <el-form-item>
-          <div style="color: #909399; font-size: 12px; line-height: 1.6">
-            该操作会调用 <code>POST /api/v1/tasks/&lt;task_id&gt;/extract-tips</code>，基于任务已产出的 KB 结果异步生成教学提示。
-            完成后刷新本页即可看到新抽出的提示条目。
-          </div>
-        </el-form-item>
-      </el-form>
-      <div slot="footer">
-        <el-button size="small" @click="extractVisible = false">取消</el-button>
-        <el-button size="small" type="primary" :loading="extractSubmitting" @click="doExtract">提交抽取</el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script>
 import { listTeachingTips, deleteTeachingTip } from '@/api/knowledgeBase'
-import { extractTeachingTips } from '@/api/tasks'
 
 const ACTION_TYPE_OPTIONS = [
   { value: 'forehand_attack', label: '正手攻球' },
@@ -130,11 +111,7 @@ export default {
       filterActionType: '',
       currentPage: 1,
       pageSize: 20,
-      actionTypeOptions: ACTION_TYPE_OPTIONS,
-
-      extractVisible: false,
-      extractSubmitting: false,
-      extractForm: { taskId: '' }
+      actionTypeOptions: ACTION_TYPE_OPTIONS
     }
   },
   created() {
@@ -162,26 +139,6 @@ export default {
     onPageChange(p) { this.currentPage = p; this.fetchList() },
     onSizeChange(s) { this.pageSize = s; this.currentPage = 1; this.fetchList() },
     onFilterChange() { this.currentPage = 1; this.fetchList() },
-    openExtract() {
-      this.extractForm.taskId = ''
-      this.extractVisible = true
-    },
-    async doExtract() {
-      const id = (this.extractForm.taskId || '').trim()
-      if (!id) { this.$message.warning('请填写 task_id'); return }
-      this.extractSubmitting = true
-      try {
-        await extractTeachingTips(id)
-        this.$message.success('已提交抽取任务，完成后请刷新查看')
-        this.extractVisible = false
-        // 稍等片刻后刷新，给后端异步处理一些时间
-        setTimeout(() => this.fetchList(), 1200)
-      } catch (e) {
-        // 拦截器已提示
-      } finally {
-        this.extractSubmitting = false
-      }
-    },
     async onDelete(row) {
       try {
         await this.$confirm(`确认删除此教学提示？`, '提示', { type: 'warning' })
