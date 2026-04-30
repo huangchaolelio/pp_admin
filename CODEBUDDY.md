@@ -11,6 +11,13 @@
 - **构建工具**: webpack（vue-cli 3）
 - **代码规范**: ESLint（vue-element-admin 内置配置）
 
+## 参考文档
+
+- **项目章程**: [.specify/memory/constitution.md](./.specify/memory/constitution.md)（MUST 阅读，尤其原则 VI）
+- **后端业务流程（权威）**: [char_pp/docs/business-workflow.md](https://github.com/huangchaolelio/char_pp/blob/master/docs/business-workflow.md)
+  - 所有系统设计、页面结构、作业/任务交互、流程优化都 MUST 与该文档保持一致
+  - 涉及菜单重排、作业状态机、异步任务入口/跳转的改动，提交 PR 前先对照此文档
+
 ## 项目结构
 
 ```text

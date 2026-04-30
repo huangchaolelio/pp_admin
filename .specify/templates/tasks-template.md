@@ -152,6 +152,7 @@ description: "功能实现任务列表模板"
 - [ ] TXXX 跨所有故事的性能优化
 - [ ] TXXX [P] 在 tests/unit/ 中添加额外的单元测试(如要求)
 - [ ] TXXX 安全加固
+- [ ] TXXX 业务流程对齐验证: 对照 char_pp/docs/business-workflow.md 走查菜单、作业状态、异步任务跳转是否与后端流程一致(章程原则 VI)
 - [ ] TXXX 运行 quickstart.md 验证
 
 ---
