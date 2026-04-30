@@ -1,5 +1,12 @@
 <template>
   <div class="app-container">
+    <div class="phase-head-tag">
+      <el-tag size="mini" effect="plain" style="margin-right:6px">STANDARDIZATION / kb_version_activate</el-tag>
+      <span class="phase-head-desc">
+        知识库草稿 → 激活 → 归档（单 active 约束 + 冲突门控，见
+        <code>docs/business-workflow.md § 4</code>）。
+      </span>
+    </div>
     <div class="filter-bar">
       <el-select v-model="filterStatus" placeholder="按状态过滤" clearable size="small" style="width: 140px" @change="onFilterChange" @clear="onFilterChange">
         <el-option label="草稿" value="draft" />
@@ -285,7 +292,7 @@ export default {
     shortId(id) { return id ? String(id).slice(0, 8) : '—' },
     gotoJob(jobId) {
       if (!jobId) return
-      this.$router.push({ path: '/extraction-jobs/index', query: { job: jobId }})
+      this.$router.push({ path: '/extraction-jobs', query: { job: jobId }})
     },
     confTagType(c) {
       const v = c || 0
@@ -306,6 +313,19 @@ export default {
 </script>
 
 <style scoped>
+.phase-head-tag {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+.phase-head-tag .phase-head-desc { color: #606266; }
+.phase-head-tag code {
+  background: #f4f4f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
 .filter-bar {
   display: flex;
   align-items: center;

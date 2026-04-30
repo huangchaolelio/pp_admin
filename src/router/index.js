@@ -46,99 +46,60 @@ export const constantRoutes = [
         path: 'dashboard',
         component: () => import('@/views/dashboard/index'),
         name: 'Dashboard',
-        meta: { title: '控制台', icon: 'dashboard', affix: true }
+        meta: { title: '业务总览', icon: 'dashboard', affix: true }
       }
     ]
   }
 ]
 
 /**
- * asyncRoutes
- * 需要根据用户角色动态加载的路由
+ * asyncRoutes（按后端 docs/business-workflow.md § 2「三阶段八步骤」分组）
  *
- * 菜单顺序遵循乒乓 AI 后端业务流水线：
- *   ① 内容基础：教练管理 → 视频分类管理
- *   ② 处理流水线：视频预处理 → KB 提取作业
- *   ③ 知识产出：知识库（版本 + 教学提示）→ 技术标准 → 动作诊断
- *   ④ 运维监控：任务监控 → 通道管理
- *   ⑤ 系统管理：用户管理（super_admin 专属，放最后）
+ *   📊 业务总览（常量路由 /dashboard）
+ *   ├─ 训练 TRAINING        — 专家视频 → 知识库草稿
+ *   │   └ 教练 / 视频分类 / 视频预处理 / KB 提取作业
+ *   ├─ 建立标准 STANDARDIZATION — 草稿 → 正式
+ *   │   └ 知识库版本 / 教学提示 / 技术标准
+ *   ├─ 诊断 INFERENCE       — 标准落地给学员
+ *   │   └ 动作诊断
+ *   └─ 运维与治理           — 跨阶段的观测与治理
+ *       └ 任务监控 / 通道管理 / 杠杆台账 / 用户管理
+ *
+ * 关键原则：所有历史 path 保持不变，仅重分组，避免断链与收藏失效。
  */
 export const asyncRoutes = [
-  // ── ① 内容基础数据 ────────────────────────────────────
+  // ── 🎯 阶段一：训练 TRAINING ──────────────────────────────
   {
-    path: '/coaches',
+    path: '/phase-training',
     component: Layout,
-    redirect: '/coaches/index',
-    name: 'Coaches',
+    alwaysShow: true,
+    name: 'PhaseTraining',
     meta: {
-      title: '教练管理',
-      icon: 'el-icon-trophy',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/coaches/index'),
-        name: 'CoachesIndex',
-        meta: { title: '教练管理', icon: 'el-icon-trophy' }
-      }
-    ]
-  },
-
-  {
-    path: '/classifications',
-    component: Layout,
-    redirect: '/classifications/index',
-    name: 'Classifications',
-    meta: {
-      title: '视频分类',
+      title: '训练 · TRAINING',
       icon: 'el-icon-video-camera',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'index',
+        path: '/coaches',
+        component: () => import('@/views/coaches/index'),
+        name: 'CoachesIndex',
+        meta: { title: '教练管理', icon: 'el-icon-trophy' }
+      },
+      {
+        path: '/classifications',
         component: () => import('@/views/classifications/index'),
         name: 'ClassificationsIndex',
-        meta: { title: '视频分类管理', icon: 'el-icon-video-camera' }
-      }
-    ]
-  },
-
-  // ── ② 处理流水线 ────────────────────────────────────
-  {
-    path: '/video-preprocessing',
-    component: Layout,
-    redirect: '/video-preprocessing/index',
-    name: 'VideoPreprocessing',
-    meta: {
-      title: '视频预处理',
-      icon: 'el-icon-film',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
+        meta: { title: '视频分类', icon: 'el-icon-s-order' }
+      },
       {
-        path: 'index',
+        path: '/video-preprocessing',
         component: () => import('@/views/video-preprocessing/index'),
         name: 'VideoPreprocessingIndex',
-        meta: { title: '预处理作业', icon: 'el-icon-film' }
-      }
-    ]
-  },
-
-  {
-    path: '/extraction-jobs',
-    component: Layout,
-    redirect: '/extraction-jobs/index',
-    name: 'ExtractionJobs',
-    meta: {
-      title: 'KB 提取作业',
-      icon: 'el-icon-share',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
+        meta: { title: '视频预处理', icon: 'el-icon-film' }
+      },
       {
-        path: 'index',
+        path: '/extraction-jobs',
         component: () => import('@/views/extraction-jobs/index'),
         name: 'ExtractionJobsIndex',
         meta: { title: 'KB 提取作业', icon: 'el-icon-share' }
@@ -146,132 +107,95 @@ export const asyncRoutes = [
     ]
   },
 
-  // ── ③ 知识产出（KB → 技术标准 → 动作诊断） ─────────────
+  // ── 📐 阶段二：建立标准 STANDARDIZATION ───────────────────
   {
-    path: '/knowledge-base',
+    path: '/phase-standardization',
     component: Layout,
-    redirect: '/knowledge-base/list',
-    name: 'KnowledgeBase',
     alwaysShow: true,
+    name: 'PhaseStandardization',
     meta: {
-      title: '知识库',
-      icon: 'el-icon-reading',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
-      {
-        path: 'list',
-        component: () => import('@/views/knowledge-base/index'),
-        name: 'KnowledgeBaseList',
-        meta: { title: '知识库版本', icon: 'el-icon-collection' }
-      },
-      {
-        path: 'teaching-tips',
-        component: () => import('@/views/knowledge-base/teaching-tips'),
-        name: 'TeachingTips',
-        meta: { title: '教学提示', icon: 'el-icon-chat-line-round' }
-      }
-    ]
-  },
-
-  {
-    path: '/standards',
-    component: Layout,
-    redirect: '/standards/index',
-    name: 'Standards',
-    meta: {
-      title: '技术标准',
+      title: '建立标准 · STANDARDIZATION',
       icon: 'el-icon-data-analysis',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'index',
+        path: '/knowledge-base/list',
+        component: () => import('@/views/knowledge-base/index'),
+        name: 'KnowledgeBaseList',
+        meta: { title: '知识库版本', icon: 'el-icon-collection' }
+      },
+      {
+        path: '/knowledge-base/teaching-tips',
+        component: () => import('@/views/knowledge-base/teaching-tips'),
+        name: 'TeachingTips',
+        meta: { title: '教学提示', icon: 'el-icon-chat-line-round' }
+      },
+      {
+        path: '/standards',
         component: () => import('@/views/standards/index'),
         name: 'StandardsIndex',
-        meta: { title: '技术标准管理', icon: 'el-icon-data-analysis' }
+        meta: { title: '技术标准', icon: 'el-icon-medal' }
       }
     ]
   },
 
+  // ── 🩺 阶段三：诊断 INFERENCE ─────────────────────────────
   {
-    path: '/diagnosis',
+    path: '/phase-inference',
     component: Layout,
-    redirect: '/diagnosis/index',
-    name: 'Diagnosis',
+    alwaysShow: true,
+    name: 'PhaseInference',
     meta: {
-      title: '动作诊断',
+      title: '诊断 · INFERENCE',
       icon: 'el-icon-cpu',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'index',
+        path: '/diagnosis',
         component: () => import('@/views/diagnosis/index'),
         name: 'DiagnosisIndex',
-        meta: { title: '动作诊断', icon: 'el-icon-cpu' }
+        meta: { title: '动作诊断', icon: 'el-icon-aim' }
       }
     ]
   },
 
-  // ── ④ 运维监控 ────────────────────────────────────
+  // ── 🛠 运维与治理（跨阶段） ───────────────────────────────
   {
-    path: '/tasks',
+    path: '/ops',
     component: Layout,
-    redirect: '/tasks/index',
-    name: 'Tasks',
+    alwaysShow: true,
+    name: 'Ops',
     meta: {
-      title: '任务监控',
-      icon: 'el-icon-time',
+      title: '运维与治理',
+      icon: 'el-icon-set-up',
       roles: ['super_admin', 'admin']
     },
     children: [
       {
-        path: 'index',
+        path: '/tasks',
         component: () => import('@/views/tasks/index'),
         name: 'TasksIndex',
         meta: { title: '任务监控', icon: 'el-icon-time' }
-      }
-    ]
-  },
-
-  {
-    path: '/channels',
-    component: Layout,
-    redirect: '/channels/index',
-    name: 'Channels',
-    meta: {
-      title: '通道管理',
-      icon: 'el-icon-connection',
-      roles: ['super_admin', 'admin']
-    },
-    children: [
+      },
       {
-        path: 'index',
+        path: '/channels',
         component: () => import('@/views/channels/index'),
         name: 'ChannelsIndex',
         meta: { title: '通道管理', icon: 'el-icon-connection' }
-      }
-    ]
-  },
-
-  // ── ⑤ 系统管理（super_admin 专属） ─────────────────
-  {
-    path: '/user',
-    component: Layout,
-    redirect: '/user/list',
-    name: 'User',
-    meta: {
-      title: '用户管理',
-      icon: 'user',
-      roles: ['super_admin']
-    },
-    children: [
+      },
       {
-        path: 'list',
+        path: '/levers',
+        component: () => import('@/views/levers/index'),
+        name: 'LeversIndex',
+        meta: { title: '杠杆台账', icon: 'el-icon-s-tools' }
+      },
+      {
+        path: '/user/list',
         component: () => import('@/views/user/list/index'),
         name: 'UserList',
-        meta: { title: '用户列表', icon: 'user' }
+        meta: { title: '用户管理', icon: 'user', roles: ['super_admin'] }
       }
     ]
   },

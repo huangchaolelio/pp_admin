@@ -44,7 +44,7 @@ export default {
   },
   methods: {
     goToTask(taskId) {
-      this.$router.push({ path: '/tasks/index', query: { task_id: taskId }})
+      this.$router.push({ path: '/tasks', query: { task_id: taskId }})
       this.$emit('update:visible', false)
     }
   }

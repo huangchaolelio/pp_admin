@@ -3,6 +3,16 @@
     <!-- 筛选栏 -->
     <el-card class="filter-bar">
       <el-form :inline="true" @submit.native.prevent="handleSearch">
+        <el-form-item label="业务阶段">
+          <el-select v-model="filter.phase" clearable placeholder="全部阶段" style="width:140px" @change="onPhaseChange">
+            <el-option v-for="opt in PHASE_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="业务步骤">
+          <el-select v-model="filter.step" clearable placeholder="全部步骤" style="width:160px">
+            <el-option v-for="opt in stepOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="filter.status" clearable placeholder="全部状态" style="width:130px">
             <el-option v-for="opt in STATUS_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
@@ -78,6 +88,18 @@
             style="margin-left:4px;padding:0"
             @click="copyToClipboard(row.task_id)"
           />
+        </template>
+      </el-table-column>
+
+      <el-table-column label="阶段" width="90">
+        <template slot-scope="{ row }">
+          <el-tag
+            v-if="rowPhase(row)"
+            :type="phaseTagType(rowPhase(row))"
+            effect="plain"
+            size="small"
+          >{{ phaseShortLabel(rowPhase(row)) }}</el-tag>
+          <span v-else class="muted-dash">—</span>
         </template>
       </el-table-column>
 
@@ -293,6 +315,14 @@
 <script>
 import { listTasks, getTaskDetail } from '@/api/tasks'
 import { listCoaches } from '@/api/coaches'
+import {
+  PHASE_OPTIONS,
+  stepOptionsByPhase,
+  phaseTagType,
+  phaseShortLabel,
+  isValidPhaseStepCombo,
+  TASK_TYPE_PHASE_STEP
+} from '@/utils/workflow'
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: '待处理' },
@@ -368,6 +398,7 @@ export default {
     return {
       STATUS_OPTIONS,
       TASK_TYPE_OPTIONS,
+      PHASE_OPTIONS,
 
       list: [],
       total: 0,
@@ -377,6 +408,8 @@ export default {
       coachLoading: false,
 
       filter: {
+        phase: '',
+        step: '',
         status: '',
         taskType: '',
         coachId: '',
@@ -397,7 +430,16 @@ export default {
       }
     }
   },
+  computed: {
+    stepOptions() {
+      return stepOptionsByPhase(this.filter.phase)
+    }
+  },
   created() {
+    // 支持从 Dashboard / 其他页面带 ?business_phase=...&business_step=... 预填筛选
+    const q = this.$route.query || {}
+    if (q.business_phase) this.filter.phase = q.business_phase
+    if (q.business_step) this.filter.step = q.business_step
     this.loadCoachOptions()
     this.fetchList()
   },
@@ -421,6 +463,19 @@ export default {
     },
     taskTypeTagType(type) {
       return TASK_TYPE_TAG_MAP[type] || 'info'
+    },
+    phaseTagType,
+    phaseShortLabel,
+    rowPhase(row) {
+      if (row && row.business_phase) return row.business_phase
+      const m = TASK_TYPE_PHASE_STEP[row && row.task_type]
+      return m && m.phase
+    },
+    onPhaseChange() {
+      // 阶段切换时，如当前 step 不属于新 phase，清空它
+      if (!isValidPhaseStepCombo(this.filter.phase, this.filter.step)) {
+        this.filter.step = ''
+      }
     },
     timingStatLabel(key) {
       return TIMING_STAT_LABEL_MAP[key] || key
@@ -487,6 +542,11 @@ export default {
     },
 
     async fetchList() {
+      // 前端先拦截明显的跨阶段组合矛盾，避免后端 400 INVALID_PHASE_STEP_COMBO
+      if (!isValidPhaseStepCombo(this.filter.phase, this.filter.step)) {
+        this.$message.warning('所选业务阶段与业务步骤不匹配，已自动重置步骤')
+        this.filter.step = ''
+      }
       this.loading = true
       try {
         const params = {
@@ -495,6 +555,8 @@ export default {
           sort_by: this.sortBy,
           order: this.order
         }
+        if (this.filter.phase) params.business_phase = this.filter.phase
+        if (this.filter.step) params.business_step = this.filter.step
         if (this.filter.status) params.status = this.filter.status
         if (this.filter.taskType) params.task_type = this.filter.taskType
         if (this.filter.coachId) params.coach_id = this.filter.coachId
@@ -527,6 +589,8 @@ export default {
 
     handleReset() {
       this.filter = {
+        phase: '',
+        step: '',
         status: '',
         taskType: '',
         coachId: '',
@@ -629,5 +693,9 @@ export default {
 .speed-slow {
   color: #e6a23c;
   font-weight: 600;
+}
+.muted-dash {
+  color: #C0C4CC;
+  font-size: 12px;
 }
 </style>

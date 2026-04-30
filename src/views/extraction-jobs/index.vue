@@ -3,7 +3,10 @@
     <div class="page-header">
       <div>
         <h2 class="page-title">KB 提取作业</h2>
-        <div class="page-desc">Feature-014 知识库提取 DAG 流水线作业列表；每个作业含 6 个子任务（视频下载 / 姿态分析 / 音频转写 / 视觉提炼 / 音频提炼 / 合并落库）。</div>
+        <div class="page-desc">
+          <el-tag size="mini" type="primary" effect="plain" style="margin-right:6px">TRAINING / extract_kb</el-tag>
+          Feature-014 知识库提取 DAG 流水线作业列表；每个作业含 6 个子任务（视频下载 / 姿态分析 / 音频转写 / 视觉提炼 / 音频提炼 / 合并落库）。
+        </div>
       </div>
       <div>
         <el-button icon="el-icon-refresh" :disabled="charPpUnavailable" @click="fetchList">刷新</el-button>
@@ -499,6 +502,9 @@ export default {
     ...mapState({ charPpUnavailable: state => state.app.charPpUnavailable })
   },
   created() {
+    // 支持从 dashboard 跳转带 ?status=... 预填
+    const q = this.$route.query || {}
+    if (q.status) this.filter.status = q.status
     this.fetchList().then(() => {
       // 支持通过 ?job=<uuid> 直接打开详情（从知识库版本页跳转）
       const jobId = this.$route.query.job

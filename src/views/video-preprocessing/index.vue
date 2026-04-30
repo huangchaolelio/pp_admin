@@ -4,6 +4,7 @@
       <div>
         <h2 class="page-title">视频预处理</h2>
         <div class="page-desc">
+          <el-tag size="mini" type="primary" effect="plain" style="margin-right:6px">TRAINING / preprocess_video</el-tag>
           Feature-016 视频预处理流水线：下载 → probe → 转码 → 分段 → 上传 COS。分段产物供后续 KB 提取复用，避免 OOM 与重复计算。
         </div>
       </div>
